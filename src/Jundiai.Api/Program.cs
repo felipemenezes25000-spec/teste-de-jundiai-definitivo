@@ -23,6 +23,8 @@ app.Use(async (context, next) =>
     await next();
 });
 
+app.UseJundiaiDemoAccessControl();
+
 app.MapGet("/api/health", () => Results.Ok(new
 {
     status = "ok",
