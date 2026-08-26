@@ -16,5 +16,12 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate frontend JavaScript
+        run: |
+          node --check src/Jundiai.Api/wwwroot/app.js
+          node --check src/Jundiai.Api/wwwroot/sw.js
       - run: dotnet restore src/Jundiai.Api/Jundiai.Api.csproj
       - run: dotnet build src/Jundiai.Api/Jundiai.Api.csproj -c Release --no-restore
