@@ -53,14 +53,14 @@ public sealed class PresentationPreparationStore(
 
     private static readonly string[] CriticalPages =
     [
-        "login.html", "poc.html", "verification.html", "evidence-pack.html", "dossier.html", "contingency.html", "command-center.html", "caretrace.html", "governance.html",
+        "index.html", "login.html", "poc.html", "verification.html", "evidence-pack.html", "dossier.html", "contingency.html", "command-center.html", "caretrace.html", "governance.html",
         "registration.html", "workforce.html", "referrals.html", "clinical-ops.html", "agenda.html", "telemedicine.html", "immunization-v2.html",
         "pharmacy-care.html", "diagnostics.html", "dental-v2.html", "billing-v2.html", "operations.html", "citizen.html", "esus.html", "acs.html"
     ];
 
     private static readonly string[] CriticalAssets =
     [
-        "poc.css", "poc.js", "verification.js", "evidence-pack.js", "dossier.js", "contingency.js", "command-center.js", "caretrace.js", "governance.js", "governance-persistence.js",
+        "auth-client.js", "poc.css", "poc.js", "verification.js", "evidence-pack.js", "dossier.js", "contingency.js", "command-center.js", "caretrace.js", "governance.js", "governance-persistence.js",
         "governance-privacy.js", "sw.js"
     ];
 
