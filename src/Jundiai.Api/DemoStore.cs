@@ -87,20 +87,21 @@ public sealed class DemoStore
     {
         lock (_gate)
         {
-            if (!System.Text.RegularExpressions.Regex.IsMatch(competence ?? string.Empty, "^[0-9]{6}$"))
+            var normalizedCompetence = competence?.Trim() ?? string.Empty;
+            if (!System.Text.RegularExpressions.Regex.IsMatch(normalizedCompetence, "^[0-9]{6}$"))
                 throw new InvalidOperationException("Competência deve estar no formato AAAAMM.");
-            if (_billing.Any(x => x.Competence == competence && x.Status != "cancelled"))
+            if (_billing.Any(x => x.Competence == normalizedCompetence && x.Status != "cancelled"))
                 throw new InvalidOperationException("Já existe lote para esta competência.");
 
-            var year = int.Parse(competence[..4], CultureInfo.InvariantCulture);
-            var month = int.Parse(competence[4..], CultureInfo.InvariantCulture);
+            var year = int.Parse(normalizedCompetence[..4], CultureInfo.InvariantCulture);
+            var month = int.Parse(normalizedCompetence[4..], CultureInfo.InvariantCulture);
             if (month is < 1 or > 12) throw new InvalidOperationException("Mês da competência inválido.");
 
-            var batch = new BillingBatch { Competence = competence };
+            var batch = new BillingBatch { Competence = normalizedCompetence };
             batch.Items.AddRange(_production.Where(x => x.ServiceDate.Year == year && x.ServiceDate.Month == month));
             ValidateBilling(batch);
             _billing.Add(batch);
-            AddAudit("poc.operator", "sus.billing.batch.create", $"billing:{batch.Id}", competence);
+            AddAudit("poc.operator", "sus.billing.batch.create", $"billing:{batch.Id}", normalizedCompetence);
             return batch;
         }
     }
