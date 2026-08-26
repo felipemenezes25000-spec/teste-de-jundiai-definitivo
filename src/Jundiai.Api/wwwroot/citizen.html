@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#176b5b" />
+  <title>Saúde Digital Jundiaí</title>
+  <style>
+    :root{font-family:Inter,system-ui,sans-serif;color:#172033;background:#eff5f3;--brand:#176b5b;--line:#dce7e3}*{box-sizing:border-box}body{margin:0}.wrap{max-width:760px;margin:auto;min-height:100vh;background:#f9fbfa}.hero{background:linear-gradient(145deg,#123b34,#176b5b);color:white;padding:34px 24px}.hero small{color:#a9d7cc}.hero h1{font-size:30px;margin:8px 0}.hero p{max-width:600px;line-height:1.6;color:#dceee9}.body{padding:22px}.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:14px;box-shadow:0 10px 30px rgba(20,55,47,.05)}label{display:grid;gap:7px;margin:14px 0;font-size:12px;color:#566760}textarea,select,input{width:100%;padding:12px;border:1px solid #cad8d3;border-radius:11px;font:inherit;background:#fff}textarea{min-height:120px;resize:vertical}.row{display:flex;gap:10px;align-items:center}.row>*{flex:1}button,a.button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:11px;padding:12px 14px;background:var(--brand);color:#fff;font-weight:700;text-decoration:none;cursor:pointer}.secondary{background:#eaf3f0!important;color:var(--brand)!important}.result{display:none}.result.show{display:block}.risk{display:inline-flex;padding:5px 9px;border-radius:999px;background:#eef3f1;font-size:11px;font-weight:800;text-transform:uppercase}.risk.emergency{background:#ffe8e4;color:#a42f25}.risk.high{background:#fff3d9;color:#8b6417}.risk.low{background:#e9f8f2;color:#176b5b}.flags{margin:10px 0;padding:11px 13px;border-radius:11px;background:#fff1ee;color:#9b392d}.route{padding:14px;border:1px solid var(--line);border-radius:13px;background:#fbfdfc}.route strong,.route span{display:block}.route span{font-size:12px;color:#61706b;margin-top:5px;line-height:1.5}.fine{font-size:11px;color:#71807b;line-height:1.5}.ok{padding:12px;border-radius:11px;background:#eaf8f2;color:#176b5b}.error{padding:12px;border-radius:11px;background:#fff0ed;color:#a43b2e}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <small>Rede Municipal de Saúde</small>
+    <h1>Porta Digital</h1>
+    <p>Uma entrada simples para organizar sua necessidade e encaminhar para a próxima etapa da rede. A classificação é apoio operacional e sempre exige decisão profissional quando houver atendimento clínico.</p>
+  </header>
+  <main class="body">
+    <div class="row"><a class="button secondary" href="/">← Gestão</a><a class="button secondary" href="/acs.html">ACS Campo</a></div>
+    <section class="card" id="profile"><strong>Carregando cidadão de demonstração…</strong></section>
+    <section class="card">
+      <h2>O que está acontecendo?</h2>
+      <label>Conte com suas palavras<textarea id="complaint" placeholder="Ex.: estou com dor forte no joelho há três dias e dificuldade para andar"></textarea></label>
+      <div class="row">
+        <label>Idade<input id="age" type="number" min="0" max="120" /></label>
+        <label>Gestante?<select id="pregnant"><option value="false">Não</option><option value="true">Sim</option></select></label>
+      </div>
+      <button id="evaluate">Organizar próximo passo</button>
+      <p class="fine">Em caso de emergência real, procure atendimento imediato. Esta demonstração não substitui avaliação médica nem serviço de urgência.</p>
+    </section>
+    <section class="card result" id="result"></section>
+  </main>
+</div>
+<script>
+let citizen=null;let assessment=null;
+const $=s=>document.querySelector(s);const esc=v=>String(v??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+async function api(url,options={}){const r=await fetch(url,{...options,headers:{'Content-Type':'application/json',...(options.headers||{})}});if(!r.ok){const p=await r.json().catch(()=>({}));throw new Error(p.detail||p.title||`Erro ${r.status}`)}return r.json()}
+async function init(){citizen=await api('/api/citizen/demo-profile');$('#profile').innerHTML=`<small>Você está acessando como</small><h2>${esc(citizen.name)}</h2><div class="route"><strong>${esc(citizen.healthUnit)}</strong><span>Área ${esc(citizen.area)} · Microárea ${esc(citizen.microArea)}</span></div>`;const birth=new Date(citizen.birthDate+'T00:00:00');const now=new Date();let age=now.getFullYear()-birth.getFullYear();const before=now.getMonth()<birth.getMonth()||(now.getMonth()===birth.getMonth()&&now.getDate()<birth.getDate());if(before)age--;$('#age').value=age}
+$('#evaluate').onclick=async()=>{const result=$('#result');result.className='card result show';result.innerHTML='Analisando regras de segurança e roteamento…';try{assessment=await api('/api/citizen/intelligent-access/evaluate',{method:'POST',body:JSON.stringify({citizenId:citizen.id,chiefComplaint:$('#complaint').value,age:Number($('#age').value)||null,pregnant:$('#pregnant').value==='true'})});const emergency=assessment.riskLevel==='emergency';result.innerHTML=`<div class="risk ${esc(assessment.riskLevel)}">${esc(assessment.riskLevel)}</div><h2>${emergency?'Atenção imediata':'Próximo passo sugerido'}</h2>${assessment.redFlags.length?`<div class="flags">${assessment.redFlags.map(esc).join('<br>')}</div>`:''}<div class="route"><strong>${esc(assessment.routing.suggestedSpecialty)}</strong><span>${esc(assessment.routing.action)}</span><span>Canal: ${esc(assessment.routing.channel)} · Prioridade: ${esc(assessment.routing.priority)}</span></div><p class="fine">Protocolo ${esc(assessment.protocolVersion)} · revisão humana obrigatória: sim</p>${emergency?'':'<label><input id="consent" type="checkbox" /> Autorizo o encaminhamento desta solicitação para a rede municipal.</label><button id="handoff">Confirmar encaminhamento</button>'}`;if(!emergency)$('#handoff').onclick=handoff}catch(e){result.innerHTML=`<div class="error">${esc(e.message)}</div>`}}
+async function handoff(){try{const data=await api(`/api/citizen/intelligent-access/${assessment.id}/handoff`,{method:'POST',body:JSON.stringify({specialty:assessment.routing.suggestedSpecialty,consentAccepted:$('#consent').checked})});$('#result').insertAdjacentHTML('beforeend',`<div class="ok">Solicitação registrada. Protocolo operacional: ${esc(data.appointmentId)}</div>`)}catch(e){$('#result').insertAdjacentHTML('beforeend',`<div class="error">${esc(e.message)}</div>`)}}
+init().catch(e=>$('#profile').innerHTML=`<div class="error">${esc(e.message)}</div>`);
+</script>
+</body></html>
