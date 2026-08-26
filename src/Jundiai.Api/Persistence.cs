@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 
@@ -211,7 +209,7 @@ public sealed class PersistenceService(IServiceProvider services, PersistenceRun
                 Kind = snapshot.Kind,
                 ResourceId = snapshot.ResourceId,
                 PayloadJson = json,
-                ContentHash = Sha256(json),
+                ContentHash = DurableJson.Sha256Canonical(json),
                 OccurredAt = now,
                 Label = label
             });
@@ -275,7 +273,6 @@ public sealed class PersistenceService(IServiceProvider services, PersistenceRun
         return services.GetRequiredService<IDbContextFactory<JundiaiDbContext>>();
     }
 
-    private static string Sha256(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 }
 
