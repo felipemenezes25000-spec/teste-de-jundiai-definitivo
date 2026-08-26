@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Jundiaí HealthOS · Diagnósticos</title><link rel="stylesheet" href="/poc.css"/>
+<style>
+.form{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.form label{display:grid;gap:5px;font-size:12px;font-weight:800;color:var(--muted)}.form input,.form select{padding:10px;border:1px solid var(--line);border-radius:10px;background:white}.orders{display:grid;gap:10px}.order{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;display:grid;grid-template-columns:1fr auto;gap:12px}.order h3{margin:2px 0}.order p{margin:4px 0;color:var(--muted);font-size:12px}.actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.actions button{font-size:11px;padding:7px 9px;margin:0}.critical{border-left:5px solid #b42318}.ok{border-left:5px solid #18794e}.tag{display:inline-block;padding:4px 7px;border-radius:8px;background:#f1f5f9;font-size:10px;font-weight:800;margin-right:4px}.integration{padding:12px;border-radius:12px;background:#f7f9fc;border:1px solid var(--line)}@media(max-width:900px){.form{grid-template-columns:1fr 1fr}.order{grid-template-columns:1fr}.actions{justify-content:flex-start}}@media(max-width:600px){.form{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header class="top"><div class="brand"><div class="brand-mark">D</div><div><strong>Laboratório & Imagem</strong><small>pedido → coleta/execução → laudo → ciência</small></div></div><div class="top-actions"><a class="button ghost" href="/poc.html">← Modo POC</a><a class="button ghost" href="/caretrace.html">CareTrace</a></div></header>
+<main class="shell">
+<section class="hero"><div><p class="eyebrow">Bloco 07 · Diagnóstico</p><h1>Resultado rastreável até a ciência clínica</h1><p>O fluxo preserva origem, pedido, execução, equipamento/modalidade, laudo, anexos e tratamento explícito de resultado crítico.</p></div><div class="score" style="--score:88%"><div><strong id="count">—</strong><span>pedidos</span></div></div></section>
+<div id="error" class="risk" hidden></div>
+<div class="section-head"><div><h2>Novo pedido</h2><p>Crie um exame laboratorial ou de imagem.</p></div><button id="critical-demo">Criar fluxo crítico completo</button></div>
+<section class="module"><div class="form">
+<label>Cidadão<select id="citizen"></select></label>
+<label>Tipo<select id="kind"><option value="laboratory">Laboratório</option><option value="imaging">Imagem</option></select></label>
+<label>Código<input id="code" value="0202020380"/></label>
+<label>Exame<input id="name" value="Hemograma completo"/></label>
+<label>Prioridade<select id="priority"><option>routine</option><option>high</option><option>urgent</option><option>emergency</option></select></label>
+<label>Origem<input id="origin" value="UBS Vila Hortolândia"/></label>
+<label>Destino<input id="destination" value="Laboratório Municipal"/></label>
+<label>Indicação<input id="indication" value="Investigação clínica demonstrativa"/></label>
+</div><button id="create" style="margin-top:14px">Criar pedido</button></section>
+<div class="section-head"><div><h2>Pedidos</h2><p>Ações habilitadas respeitam o estado atual do exame.</p></div><button class="ghost" id="refresh">Atualizar</button></div>
+<section class="orders" id="orders"></section>
+<div class="section-head"><div><h2>Fronteiras externas</h2><p>PACS/LIS permanecem desacoplados e governados.</p></div></div><section class="module-grid" id="integrations"></section>
+</main><script src="/diagnostics.js"></script></body></html>
