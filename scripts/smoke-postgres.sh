@@ -47,7 +47,14 @@ python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["checkpointId"]==s
 curl -fsS "${AUTH[@]}" "$BASE_URL/api/audit/persistence/recovery/readiness" | assert_json 'd["configured"] is True and d["recoveryDrillAvailable"] is True and d["checkpoints"]>=2'
 curl -fsS "${AUTH[@]}" "$BASE_URL/api/audit/persistence/checkpoints" | assert_json 'len(d)>=2 and any(x["envelopeCount"]>=19 for x in d)'
 
-# Outbox + replay idempotente.
+# Inbox idempotente: a mesma mensagem externa só gera um receipt durável.
+INBOX_FIRST=$(curl -fsS -X POST "${AUTH[@]}" "$BASE_URL/api/audit/persistence/inbox" -H 'Content-Type: application/json' -d '{"type":"lis.result.demo","messageId":"lis-msg-001","payload":{"accession":"ACC-001","result":"hash-safe"},"actor":"ci.integration","idempotencyRetentionDays":30}')
+INBOX_RECEIPT=$(python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["duplicate"] is False and len(d["payloadSha256"])==64; print(d["receiptId"])' <<<"$INBOX_FIRST")
+INBOX_SECOND=$(curl -fsS -X POST "${AUTH[@]}" "$BASE_URL/api/audit/persistence/inbox" -H 'Content-Type: application/json' -d '{"type":"lis.result.demo","messageId":"lis-msg-001","payload":{"accession":"ACC-001","result":"hash-safe"},"actor":"ci.integration","idempotencyRetentionDays":30}')
+python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["duplicate"] is True and d["receiptId"]==sys.argv[1]' "$INBOX_RECEIPT" <<<"$INBOX_SECOND"
+curl -fsS "${AUTH[@]}" "$BASE_URL/api/audit/persistence/inbox" | assert_json 'len(d)==1 and d[0]["resourceId"]=="lis.result.demo:lis-msg-001"'
+
+# Outbox + replay idempotente + processamento normal.
 FIRST=$(curl -fsS -X POST "${AUTH[@]}" "$BASE_URL/api/audit/persistence/outbox" -H 'Content-Type: application/json' -d '{"type":"rnds.document.demo","idempotencyKey":"ci-outbox-001","payload":{"citizen":"demo","document":"hash-only"}}')
 OUTBOX_ID=$(python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["status"]=="pending" and d["idempotentReplay"] is False; print(d["id"])' <<<"$FIRST")
 SECOND=$(curl -fsS -X POST "${AUTH[@]}" "$BASE_URL/api/audit/persistence/outbox" -H 'Content-Type: application/json' -d '{"type":"rnds.document.demo","idempotencyKey":"ci-outbox-001","payload":{"citizen":"demo","document":"hash-only"}}')
@@ -55,9 +62,22 @@ python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["id"]==sys.argv[1]
 
 PROCESSED=$(curl -fsS -X POST "${AUTH[@]}" "$BASE_URL/api/audit/persistence/outbox/$OUTBOX_ID/processed" -H 'Content-Type: application/json' -d '{}')
 python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["status"]=="processed" and d["processedAt"]' <<<"$PROCESSED"
+
+# Retry/dead-letter: falhas sucessivas devem parar a mensagem e requeue exige justificativa.
+RETRY_MSG=$(curl -fsS -X POST "${AUTH[@]}" "$BASE_URL/api/audit/persistence/outbox" -H 'Content-Type: application/json' -d '{"type":"pacs.study.demo","idempotencyKey":"ci-outbox-retry-001","payload":{"study":"1.2.3.demo"}}')
+RETRY_ID=$(python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["id"])' <<<"$RETRY_MSG")
+FAIL1=$(curl -fsS -X POST "${AUTH[@]}" "$BASE_URL/api/audit/persistence/outbox/$RETRY_ID/failure" -H 'Content-Type: application/json' -d '{"errorCode":"PACS_TIMEOUT","errorClass":"transient","maxAttempts":2,"actor":"ci.worker"}')
+python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["status"]=="retry" and d["attempts"]==1' <<<"$FAIL1"
+FAIL2=$(curl -fsS -X POST "${AUTH[@]}" "$BASE_URL/api/audit/persistence/outbox/$RETRY_ID/failure" -H 'Content-Type: application/json' -d '{"errorCode":"PACS_TIMEOUT","errorClass":"transient","maxAttempts":2,"actor":"ci.worker"}')
+python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["status"]=="dead_letter" and d["attempts"]==2' <<<"$FAIL2"
+REQUEUED=$(curl -fsS -X POST "${AUTH[@]}" "$BASE_URL/api/audit/persistence/outbox/$RETRY_ID/requeue" -H 'Content-Type: application/json' -d '{"actor":"ci.operator","reason":"dependência externa recuperada no cenário de teste"}')
+python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["status"]=="pending" and d["attempts"]==2' <<<"$REQUEUED"
+curl -fsS "${AUTH[@]}" "$BASE_URL/api/audit/persistence/outbox/pending" | assert_json 'any(x["id"]=="'"$RETRY_ID"'" and x["status"]=="pending" for x in d)'
+
+curl -fsS "${AUTH[@]}" "$BASE_URL/api/audit/persistence/messaging/readiness" | assert_json 'd["configured"] is True and d["inboxReceipts"]==1 and d["pendingOutbox"]>=1'
 curl -fsS "${AUTH[@]}" "$BASE_URL/api/audit/persistence/outbox" | assert_json 'any(x["status"]=="processed" for x in d)'
 
-# Recovery drill também precisa deixar trilha de evidência.
-curl -fsS "${AUTH[@]}" "$BASE_URL/api/evidence/ledger" | assert_json 'any(x["action"]=="persistence.full-checkpoint" for x in d) and any(x["action"]=="persistence.recovery-drill" for x in d)'
+# Recovery e integração durável precisam deixar trilha de evidência.
+curl -fsS "${AUTH[@]}" "$BASE_URL/api/evidence/ledger" | assert_json 'any(x["action"]=="persistence.full-checkpoint" for x in d) and any(x["action"]=="persistence.recovery-drill" for x in d) and any(x["action"]=="integration.inbox.accept" for x in d) and any(x["action"]=="integration.outbox.failure" for x in d) and any(x["action"]=="integration.outbox.requeue" for x in d)'
 
-echo "Smoke PostgreSQL + recovery OK · checkpoint=$FULL_ID"
+echo "Smoke PostgreSQL + recovery + messaging OK · checkpoint=$FULL_ID"
