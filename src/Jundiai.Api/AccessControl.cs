@@ -248,7 +248,7 @@ public sealed class DemoAccessControlMiddleware(RequestDelegate next)
 
         if (path.StartsWithSegments("/api/access/context")) return JundiaiPermissions.CitizenRead;
         if (path.StartsWithSegments("/api/security")) return JundiaiPermissions.SecurityRead;
-        if (path.StartsWithSegments("/api/contract") || path.StartsWithSegments("/api/poc")) return JundiaiPermissions.ContractRead;
+        if (path.StartsWithSegments("/api/contract") || path.StartsWithSegments("/api/platform") || path.StartsWithSegments("/api/poc")) return JundiaiPermissions.ContractRead;
         if (path.StartsWithSegments("/api/evidence")) return write ? JundiaiPermissions.EvidenceWrite : JundiaiPermissions.EvidenceRead;
         if (path.StartsWithSegments("/api/ai")) return write ? JundiaiPermissions.AiManage : JundiaiPermissions.AiRead;
         if (path.StartsWithSegments("/api/migration")) return write ? JundiaiPermissions.MigrationManage : JundiaiPermissions.MigrationRead;
