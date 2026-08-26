@@ -13,6 +13,7 @@ builder.Services.Configure<JsonOptions>(options =>
 builder.Services.AddSingleton<DemoStore>();
 builder.Services.AddSingleton<MunicipalOperationsStore>();
 builder.Services.AddSingleton<DemoIdentityStore>();
+builder.Services.AddSingleton<CitizenMasterDataStore>();
 builder.Services.AddSingleton<SchedulingStore>();
 builder.Services.AddSingleton<TelemedicineStore>();
 builder.Services.AddSingleton<SusBillingEngineStore>();
@@ -70,6 +71,7 @@ app.MapGet("/api/citizens/{id:guid}", (Guid id, DemoStore store) =>
     store.Citizen(id) is { } citizen ? Results.Ok(citizen) : Results.NotFound());
 
 app.MapAuthSecurityEndpoints();
+app.MapCitizenMasterDataEndpoints();
 app.MapClinicalEndpoints();
 app.MapClinicalDocumentEndpoints();
 app.MapIntelligentAccessEndpoints();
