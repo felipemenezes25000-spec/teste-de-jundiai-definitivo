@@ -1,5 +1,5 @@
-const CACHE='jundiai-healthos-poc-v6';
-const ASSETS=['/','/index.html','/styles.css','/clinical.css','/app.js','/citizen.html','/operations.html','/esus.html','/acs.html','/manifest.webmanifest','/login.html','/poc.html','/poc.css','/poc.js','/caretrace.html','/caretrace.js','/agenda.html','/agenda.js','/diagnostics.html','/diagnostics.js','/dental-v2.html','/dental-v2.js','/governance.html','/governance.js','/governance-persistence.js','/billing-v2.html','/billing-v2.js'];
+const CACHE='jundiai-healthos-poc-v7';
+const ASSETS=['/','/index.html','/styles.css','/clinical.css','/app.js','/citizen.html','/operations.html','/esus.html','/acs.html','/manifest.webmanifest','/login.html','/poc.html','/poc.css','/poc.js','/caretrace.html','/caretrace.js','/agenda.html','/agenda.js','/telemedicine.html','/telemedicine-ui.js','/diagnostics.html','/diagnostics.js','/dental-v2.html','/dental-v2.js','/governance.html','/governance.js','/governance-persistence.js','/governance-privacy.js','/billing-v2.html','/billing-v2.js'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS))));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))));
 self.addEventListener('fetch',event=>{
