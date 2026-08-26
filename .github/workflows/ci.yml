@@ -1,6 +1,8 @@
 name: ci
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -9,6 +11,20 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: jundiai
+          POSTGRES_USER: jundiai
+          POSTGRES_PASSWORD: ci-jundiai-poc
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U jundiai -d jundiai"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -17,21 +33,67 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+
       - name: Validate frontend JavaScript
         run: |
-          node --check src/Jundiai.Api/wwwroot/app.js
-          node --check src/Jundiai.Api/wwwroot/sw.js
-          node --check src/Jundiai.Api/wwwroot/poc.js
-          node --check src/Jundiai.Api/wwwroot/caretrace.js
-      - name: Validate smoke script
-        run: bash -n scripts/smoke.sh
+          set -euo pipefail
+          for file in \
+            src/Jundiai.Api/wwwroot/app.js \
+            src/Jundiai.Api/wwwroot/sw.js \
+            src/Jundiai.Api/wwwroot/poc.js \
+            src/Jundiai.Api/wwwroot/caretrace.js \
+            src/Jundiai.Api/wwwroot/registration.js \
+            src/Jundiai.Api/wwwroot/workforce.js \
+            src/Jundiai.Api/wwwroot/referrals.js \
+            src/Jundiai.Api/wwwroot/clinical-ops.js \
+            src/Jundiai.Api/wwwroot/agenda.js \
+            src/Jundiai.Api/wwwroot/telemedicine-ui.js \
+            src/Jundiai.Api/wwwroot/immunization-v2.js \
+            src/Jundiai.Api/wwwroot/pharmacy-care.js \
+            src/Jundiai.Api/wwwroot/command-center.js \
+            src/Jundiai.Api/wwwroot/verification.js \
+            src/Jundiai.Api/wwwroot/diagnostics.js \
+            src/Jundiai.Api/wwwroot/dental-v2.js \
+            src/Jundiai.Api/wwwroot/governance.js \
+            src/Jundiai.Api/wwwroot/governance-persistence.js \
+            src/Jundiai.Api/wwwroot/governance-privacy.js \
+            src/Jundiai.Api/wwwroot/billing-v2.js; do
+            node --check "$file"
+          done
+
+      - name: Validate smoke scripts
+        run: |
+          bash -n scripts/smoke.sh
+          bash -n scripts/smoke-platform.sh
+          bash -n scripts/smoke-postgres.sh
+          bash -n scripts/smoke-wave4.sh
+
       - name: Public repository secret hygiene
         run: |
           if grep -R -n -E 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|AKIA[0-9A-Z]{16}' --exclude-dir=.git .; then
             echo 'Potential private key or AWS access key material found.'
             exit 1
           fi
-      - run: dotnet restore src/Jundiai.Api/Jundiai.Api.csproj
-      - run: dotnet build src/Jundiai.Api/Jundiai.Api.csproj -c Release --no-restore
-      - name: Smoke test POC
+
+      - name: Restore
+        run: dotnet restore src/Jundiai.Api/Jundiai.Api.csproj
+
+      - name: Build Release
+        run: dotnet build src/Jundiai.Api/Jundiai.Api.csproj -c Release --no-restore
+
+      - name: Smoke integrated POC
         run: bash scripts/smoke.sh
+
+      - name: Smoke platform governance
+        run: bash scripts/smoke-platform.sh
+
+      - name: Smoke wave 4
+        run: bash scripts/smoke-wave4.sh
+
+      - name: Smoke PostgreSQL durability
+        env:
+          JUNDIAI_POSTGRES_PASSWORD: ci-jundiai-poc
+          JUNDIAI_POSTGRES_DB: jundiai
+          JUNDIAI_POSTGRES_USER: jundiai
+          JUNDIAI_POSTGRES_PORT: '5432'
+        run: bash scripts/smoke-postgres.sh
