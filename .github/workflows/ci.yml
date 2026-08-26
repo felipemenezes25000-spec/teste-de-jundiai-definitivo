@@ -55,7 +55,9 @@ jobs:
             src/Jundiai.Api/wwwroot/governance.js \
             src/Jundiai.Api/wwwroot/governance-persistence.js \
             src/Jundiai.Api/wwwroot/governance-privacy.js \
-            src/Jundiai.Api/wwwroot/billing-v2.js; do
+            src/Jundiai.Api/wwwroot/billing-v2.js \
+            tests/e2e/presentation.spec.mjs \
+            playwright.config.mjs; do
             node --check "$file"
           done
       - name: Validate smoke scripts
@@ -80,6 +82,22 @@ jobs:
         run: bash scripts/smoke-platform.sh
       - name: Smoke wave 4
         run: bash scripts/smoke-wave4.sh
+      - name: Install browser E2E dependencies
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Browser E2E presentation flow
+        run: npm run test:e2e
+      - name: Upload browser failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-failure-evidence
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Smoke PostgreSQL durability
         env:
           JUNDIAI_POSTGRES_PASSWORD: ci-jundiai-poc
