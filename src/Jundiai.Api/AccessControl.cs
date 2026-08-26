@@ -226,7 +226,15 @@ public sealed class DemoAccessControlMiddleware(RequestDelegate next)
         }
         if (!JundiaiPermissionCatalog.RoleGrants(role, required))
         {
-            await Deny(context, "Acesso negado", $"O papel '{role}' não possui a permissão '{required}'.", required, role);
+            var disabledHeader = role.StartsWith("blocked_demo_header:", StringComparison.OrdinalIgnoreCase);
+            await Deny(
+                context,
+                disabledHeader ? "Cabeçalho demonstrativo desabilitado" : "Acesso negado",
+                disabledHeader
+                    ? "X-Demo-Role não concede acesso nesta instância. Autentique uma identidade real da POC ou habilite conscientemente JUNDIAI_ALLOW_DEMO_ROLE_HEADER=true apenas em ambiente demonstrativo controlado."
+                    : $"O papel '{role}' não possui a permissão '{required}'.",
+                required,
+                role);
             return;
         }
 
@@ -240,11 +248,9 @@ public sealed class DemoAccessControlMiddleware(RequestDelegate next)
         if (context.Items["jundiai.auth.role"] is string authenticatedRole && !string.IsNullOrWhiteSpace(authenticatedRole))
             return authenticatedRole;
 
-        if (DemoRoleHeaderEnabled)
-        {
-            var headerRole = context.Request.Headers["X-Demo-Role"].FirstOrDefault();
-            if (!string.IsNullOrWhiteSpace(headerRole)) return headerRole.Trim();
-        }
+        var headerRole = context.Request.Headers["X-Demo-Role"].FirstOrDefault();
+        if (!string.IsNullOrWhiteSpace(headerRole))
+            return DemoRoleHeaderEnabled ? headerRole.Trim() : $"blocked_demo_header:{headerRole.Trim()}";
 
         return JundiaiRoles.Anonymous;
     }
