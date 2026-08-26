@@ -39,6 +39,7 @@ jobs:
             src/Jundiai.Api/wwwroot/sw.js \
             src/Jundiai.Api/wwwroot/poc.js \
             src/Jundiai.Api/wwwroot/evidence-pack.js \
+            src/Jundiai.Api/wwwroot/dossier.js \
             src/Jundiai.Api/wwwroot/caretrace.js \
             src/Jundiai.Api/wwwroot/registration.js \
             src/Jundiai.Api/wwwroot/workforce.js \
