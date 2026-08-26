@@ -15,9 +15,11 @@ public static class ClinicalEndpoints
         {
             var citizen = store.Citizen(citizenId);
             if (citizen is null) return Results.NotFound();
-            var profile = Profiles.GetOrAdd(citizenId, id => SeedProfile(citizen));
+            var profile = Profiles.GetOrAdd(citizenId, _ => SeedProfile(citizen));
             var timeline = Encounters.GetOrAdd(citizenId, _ => SeedEncounters(citizen));
-            return Results.Ok(new Patient360Summary(citizen, profile, timeline.OrderByDescending(x => x.OccurredAt).ToList()));
+            List<ClinicalEncounter> snapshot;
+            lock (timeline) snapshot = timeline.OrderByDescending(x => x.OccurredAt).ToList();
+            return Results.Ok(new Patient360Summary(citizen, profile, snapshot));
         });
 
         endpoints.MapPost("/api/clinical/patients/{citizenId:guid}/encounters", (Guid citizenId, CreateClinicalEncounterRequest request, DemoStore store) =>
@@ -93,5 +95,16 @@ public static class ProfessionalWorkspaceCatalog
         };
 
     public static IReadOnlyList<ProfessionalWorkspace> All => Items.Values.OrderBy(x => x.Label).ToList();
-    public static bool TryResolve(string code, out ProfessionalWorkspace workspace) => Items.TryGetValue(code ?? string.Empty, out workspace!);
+
+    public static bool TryResolve(string? code, out ProfessionalWorkspace workspace)
+    {
+        if (!string.IsNullOrWhiteSpace(code) && Items.TryGetValue(code, out var found))
+        {
+            workspace = found;
+            return true;
+        }
+
+        workspace = null!;
+        return false;
+    }
 }
