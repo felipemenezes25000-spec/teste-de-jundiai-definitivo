@@ -18,6 +18,20 @@ public static class IntelligentAccessEndpoints
             services = new[] { "teleconsulta", "regulação", "UBS", "urgência" }
         }));
 
+        endpoints.MapGet("/api/citizen/demo-profile", (DemoStore store) =>
+        {
+            var citizen = store.Citizens().First();
+            return Results.Ok(new
+            {
+                citizen.Id,
+                citizen.Name,
+                citizen.BirthDate,
+                citizen.HealthUnit,
+                citizen.Area,
+                citizen.MicroArea
+            });
+        });
+
         endpoints.MapPost("/api/citizen/intelligent-access/evaluate", (IntelligentAccessRequest request, DemoStore store) =>
         {
             var citizen = store.Citizen(request.CitizenId);
