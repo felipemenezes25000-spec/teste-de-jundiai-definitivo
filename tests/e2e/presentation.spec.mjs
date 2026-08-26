@@ -34,12 +34,18 @@ async function streamToBuffer(stream) {
   return Buffer.concat(chunks);
 }
 
-test('login + MFA abre o Modo POC', async ({ page }) => {
+test('login + MFA + Preparar Banca deixam o cockpit READY', async ({ page }) => {
   await authenticate(page);
   await page.locator('#continue').click();
   await expect(page).toHaveURL(/\/poc\.html$/);
   await expect(page.getByRole('heading', { name: /Uma apresentação guiada pelos 14 blocos/i })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Evidence Pack', exact: true }).first()).toBeVisible();
+
+  await page.locator('#prepare-presentation').click();
+  await expect(page.locator('#presentation-status')).toContainText('READY · banca preparada');
+  await expect(page.locator('#presentation-status')).toContainText('8/8');
+  await expect(page.locator('#presentation-status')).toContainText('Runner 14/14');
+  await expect(page.locator('#presentation-status')).toContainText('Evidence Pack SHA-256');
 });
 
 test('Evidence Pack é gerado, verificado e exportado pelo navegador', async ({ page }) => {
