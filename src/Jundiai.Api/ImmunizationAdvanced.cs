@@ -80,18 +80,22 @@ public sealed class ImmunizationAdvancedStore
     }
 
     public IReadOnlyList<ImmunizationScheduleRule> Rules() => _rules.Values.OrderBy(x => x.Vaccine).ToList();
+    public IReadOnlyList<ImmunizationAdverseEvent> AdverseEvents(Guid? citizenId) => _adverseEvents.Values
+        .Where(x => citizenId is null || x.CitizenId == citizenId.Value)
+        .OrderByDescending(x => x.CreatedAt)
+        .ToList();
 
     public IReadOnlyList<CitizenImmunizationSchedule> Schedule(Guid? citizenId, DemoStore demo)
     {
         var citizens = citizenId is { } id
-            ? demo.Citizen(id) is { } citizen ? new[] { citizen } : Array.Empty<Citizen>()
+            ? demo.Citizen(id) is { } selectedCitizen ? new[] { selectedCitizen } : Array.Empty<Citizen>()
             : demo.Citizens().ToArray();
         var now = DateTimeOffset.UtcNow;
         var result = new List<CitizenImmunizationSchedule>();
-        foreach (var citizen in citizens)
+        foreach (var currentCitizen in citizens)
         {
-            var age = Age(citizen.BirthDate, DateOnly.FromDateTime(DateTime.Today));
-            var history = demo.Immunizations(citizen.Id);
+            var age = Age(currentCitizen.BirthDate, DateOnly.FromDateTime(DateTime.Today));
+            var history = demo.Immunizations(currentCitizen.Id);
             var items = new List<ImmunizationScheduleItem>();
             foreach (var rule in _rules.Values.Where(x => age >= x.MinAge && age <= x.MaxAge))
             {
@@ -105,7 +109,7 @@ public sealed class ImmunizationAdvancedStore
                 var status = latest is null ? "due" : dueAt is { } due && due <= now ? "overdue" : "up_to_date";
                 items.Add(new ImmunizationScheduleItem(rule.Id, rule.Vaccine, rule.DoseLabel, status, dueAt, latest?.AppliedAt, latest?.Lot, rule.PolicyVersion));
             }
-            result.Add(new CitizenImmunizationSchedule(citizen.Id, citizen.Name, age, items.OrderByDescending(x => x.Status == "overdue").ThenBy(x => x.Vaccine).ToList(), now));
+            result.Add(new CitizenImmunizationSchedule(currentCitizen.Id, currentCitizen.Name, age, items.OrderByDescending(x => x.Status == "overdue").ThenBy(x => x.Vaccine).ToList(), now));
         }
         return result;
     }
