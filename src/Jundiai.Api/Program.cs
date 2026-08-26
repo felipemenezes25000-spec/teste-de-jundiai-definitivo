@@ -38,6 +38,7 @@ builder.Services.AddSingleton<PrivacyGovernanceStore>();
 builder.Services.AddJundiaiPersistence(builder.Configuration);
 builder.Services.AddSingleton<PersistenceRecoveryService>();
 builder.Services.AddSingleton<IntegrationMessagingPersistenceService>();
+builder.Services.AddSingleton<PocEvidencePackStore>();
 builder.Services.AddJundiaiOperationalTelemetry();
 
 var app = builder.Build();
@@ -65,7 +66,7 @@ app.UseJundiaiDemoAccessControl();
 app.MapGet("/api/health", (PersistenceRuntimeState persistence) => Results.Ok(new
 {
     status = "ok",
-    service = "Jundiai HealthOS POC",
+    service = "Jundiaí HealthOS POC",
     contract = "RCE 008/2026",
     runtime = ".NET 8",
     persistence = persistence.Mode,
@@ -107,6 +108,7 @@ app.MapPopulationAnalyticsEndpoints();
 app.MapMunicipalCommandCenterEndpoints();
 app.MapPocScenarioEndpoints();
 app.MapPocVerificationRunnerEndpoints();
+app.MapPocEvidencePackEndpoints();
 app.MapPlatformReadinessEndpoints();
 app.MapJundiaiPersistenceEndpoints();
 app.MapPersistenceRecoveryEndpoints();
