@@ -97,7 +97,7 @@ public sealed class PresentationPreparationStore(
             var elevatedStatus =
                 string.Equals(x.Status, "homologated", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(x.Status, "production_enabled", StringComparison.OrdinalIgnoreCase);
-            return !elevatedStatus || !string.IsNullOrWhiteSpace(x.EvidenceReference);
+            return !elevatedStatus || !string.IsNullOrWhiteSpace(x.LastAssessment?.EvidenceReference);
         });
 
         var checks = new List<PresentationCheck>
