@@ -17,6 +17,7 @@
     <a class="button ghost" href="/verification.html">✓ Verificar 14 blocos</a>
     <a class="button ghost" href="/evidence-pack.html">Evidence Pack</a>
     <a class="button ghost" href="/dossier.html">Dossiê da Banca</a>
+    <a class="button ghost" href="/contingency.html">Kit de Contingência</a>
     <a class="button ghost" href="/command-center.html">Command Center</a>
     <a class="button ghost" href="/registration.html">MPI</a>
     <a class="button ghost" href="/workforce.html">Profissionais</a>
@@ -47,7 +48,7 @@
   <section class="summary-grid" id="summary"></section>
 
   <div class="section-head">
-    <div><h2>Preparação da banca</h2><p>Um clique prepara cenário ouro, executa 14/14, gera Evidence Pack e valida páginas, assets, ledger, integrações e blockers.</p></div>
+    <div><h2>Preparação da banca</h2><p>Um clique prepara cenário ouro, executa 14/14, gera Evidence Pack e valida 24 páginas, 12 assets, ledger, integrações e blockers. Depois, Dossiê e Kit de Contingência congelam a prova final.</p></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button id="prepare-presentation">Preparar banca completa</button><button class="ghost" id="prepare-golden">Somente cenário ouro</button></div>
   </div>
   <section class="module-grid">
@@ -55,7 +56,8 @@
     <article class="module" id="golden-status"><h3>Pronto para preparar</h3><p>O cenário conecta regulação → agenda → teleconsulta → diagnóstico → documento → IA revisada → evidência.</p></article>
     <article class="module"><h3>Verificação automática</h3><p>O runner executa os 14 blocos contra o estado funcional e grava o resultado no Evidence Ledger.</p><a class="button" href="/verification.html">Abrir runner dos 14 blocos</a></article>
     <article class="module"><h3>Evidence Pack</h3><p>Consolida 14 blocos, integrações, Production Gates, persistência e eventos em um JSON verificável por SHA-256.</p><a class="button" href="/evidence-pack.html">Gerar pacote da banca</a></article>
-    <article class="module"><h3>Dossiê da Banca</h3><p>Congela o preflight READY, o Evidence Pack e a identidade do build em um artefato com hash e código curto de verificação, pronto para impressão/PDF.</p><a class="button" href="/dossier.html">Gerar dossiê final</a></article>
+    <article class="module"><h3>Dossiê da Banca</h3><p>Congela preflight, Evidence Pack, identidade do build e manifesto SHA-256 dos artefatos runtime em um comprovante verificável e imprimível.</p><a class="button" href="/dossier.html">Gerar dossiê final</a></article>
+    <article class="module"><h3>Kit de Contingência</h3><p>Empacota Dossiê, Evidence Pack, provenance, hashes e HTML autocontido em um ZIP verificável para apresentação mesmo sem aplicação/rede.</p><a class="button" href="/contingency.html">Gerar kit offline</a></article>
     <article class="module"><h3>Command Center</h3><p>Visão transversal de filas, faltas, críticos, prevenção, estoque, telemedicina e faturamento.</p><a class="button" href="/command-center.html">Abrir Command Center</a></article>
     <article class="module" id="integration-status"><h3>Integrações</h3><p>Carregando registro de fronteiras externas…</p></article>
     <article class="module" id="migration-status"><h3>Migração</h3><p>Carregando workspace de legado…</p></article>
@@ -72,7 +74,8 @@
       <div class="rows">
         <div class="row"><span>Verificação requisito por requisito</span><strong><a href="/verification.html">Runner 14 blocos</a></strong></div>
         <div class="row"><span>Pacote verificável da apresentação</span><strong><a href="/evidence-pack.html">Evidence Pack</a></strong></div>
-        <div class="row"><span>Comprovante final verificável/imprimível</span><strong><a href="/dossier.html">Dossiê da Banca</a></strong></div>
+        <div class="row"><span>Comprovante final + provenance runtime</span><strong><a href="/dossier.html">Dossiê da Banca</a></strong></div>
+        <div class="row"><span>Plano B estático sem rede</span><strong><a href="/contingency.html">Kit de Contingência</a></strong></div>
         <div class="row"><span>KPIs e alertas transversais</span><strong><a href="/command-center.html">Command Center</a></strong></div>
         <div class="row"><span>MPI / CPF / CNS / reconciliação</span><strong><a href="/registration.html">Cadastro mestre</a></strong></div>
         <div class="row"><span>CBO / conselho / equipe / lotação</span><strong><a href="/workforce.html">Rede profissional</a></strong></div>
