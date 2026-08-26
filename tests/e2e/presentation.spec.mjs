@@ -1,0 +1,110 @@
+import { expect, test } from '@playwright/test';
+
+async function authenticate(page) {
+  await page.goto('/login.html', { waitUntil: 'domcontentloaded' });
+  await expect(page).toHaveTitle(/Jundiaí HealthOS/);
+  await expect(page.locator('#username')).toHaveValue('admin.jundiai');
+  await page.locator('#login').click();
+  await expect(page.locator('#mfa')).toBeVisible();
+  await page.locator('#verify').click();
+  await expect(page.locator('#continue')).toBeVisible();
+  await expect(page.locator('#message')).toContainText('Autenticado como admin.jundiai');
+  const token = await page.evaluate(() => localStorage.getItem('jundiai.session'));
+  expect(token).toBeTruthy();
+}
+
+function browserProblems(page) {
+  const problems = [];
+  page.on('pageerror', error => problems.push(`pageerror: ${error.message}`));
+  page.on('console', message => {
+    if (message.type() === 'error') problems.push(`console: ${message.text()}`);
+  });
+  page.on('response', response => {
+    const type = response.request().resourceType();
+    if (response.status() >= 400 && ['document', 'script', 'stylesheet'].includes(type)) {
+      problems.push(`http ${response.status()}: ${response.url()}`);
+    }
+  });
+  return problems;
+}
+
+async function streamToBuffer(stream) {
+  const chunks = [];
+  for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+  return Buffer.concat(chunks);
+}
+
+test('login + MFA abre o Modo POC', async ({ page }) => {
+  await authenticate(page);
+  await page.locator('#continue').click();
+  await expect(page).toHaveURL(/\/poc\.html$/);
+  await expect(page.getByRole('heading', { name: /Uma apresentação guiada pelos 14 blocos/i })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Evidence Pack', exact: true }).first()).toBeVisible();
+});
+
+test('Evidence Pack é gerado, verificado e exportado pelo navegador', async ({ page }) => {
+  await authenticate(page);
+  await page.goto('/evidence-pack.html', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('heading', { name: /14 blocos, evidências, dependências e hash/i })).toBeVisible();
+
+  await page.locator('#generate').click();
+  await expect(page.locator('#summary')).toContainText('14/14');
+  await expect(page.locator('#blocks .pack-block')).toHaveCount(14);
+  await expect(page.locator('#pack-meta')).toContainText('SHA-256');
+  await expect(page.locator('#blockers')).toContainText('HAB-AT-29');
+
+  await page.locator('#verify').click();
+  await expect(page.locator('#pack-meta')).toContainText('INTEGRIDADE APROVADA');
+  await expect(page.locator('#pack-meta')).toContainText('package hash OK');
+  await expect(page.locator('#pack-meta')).toContainText('Evidence Ledger OK');
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.locator('#export').click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/^jundiai-rce-008-2026-evidence-pack-.*\.json$/);
+  const stream = await download.createReadStream();
+  const exported = JSON.parse((await streamToBuffer(stream)).toString('utf8'));
+  expect(exported.packageSha256).toMatch(/^[a-f0-9]{64}$/);
+  expect(exported.payload.verification.passedBlocks).toBe(14);
+  expect(exported.payload.verification.totalBlocks).toBe(14);
+  expect(exported.payload.blocks).toHaveLength(14);
+  expect(exported.payload.nonCodeBlockers.some(item => item.id === 'HAB-AT-29')).toBe(true);
+});
+
+test('superfícies críticas da apresentação renderizam sem erro fatal de browser', async ({ page }) => {
+  await authenticate(page);
+  const problems = browserProblems(page);
+  const routes = [
+    '/poc.html',
+    '/verification.html',
+    '/evidence-pack.html',
+    '/command-center.html',
+    '/caretrace.html',
+    '/governance.html',
+    '/registration.html',
+    '/workforce.html',
+    '/referrals.html',
+    '/clinical-ops.html',
+    '/agenda.html',
+    '/telemedicine.html',
+    '/immunization-v2.html',
+    '/pharmacy-care.html',
+    '/diagnostics.html',
+    '/dental-v2.html',
+    '/billing-v2.html',
+    '/operations.html',
+    '/citizen.html',
+    '/esus.html',
+    '/acs.html'
+  ];
+
+  for (const route of routes) {
+    problems.length = 0;
+    const response = await page.goto(route, { waitUntil: 'domcontentloaded' });
+    expect(response, `sem resposta para ${route}`).not.toBeNull();
+    expect(response.status(), `status da página ${route}`).toBeLessThan(400);
+    await expect(page.locator('body')).toBeVisible();
+    await page.waitForTimeout(300);
+    expect(problems, `problemas em ${route}`).toEqual([]);
+  }
+});
