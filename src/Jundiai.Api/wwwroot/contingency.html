@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Jundiaí HealthOS · Kit de Contingência</title>
+  <link rel="stylesheet" href="/poc.css" />
+  <style>
+    .kit-code{font:900 28px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.07em;color:#123f70;word-break:break-all}
+    .kit-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.kit-grid article{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px}.kit-grid strong{display:block;font-size:22px}.kit-grid small{color:var(--muted)}
+    .hash{font:11px ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-all;background:#f6f8fb;border:1px solid var(--line);border-radius:10px;padding:10px}
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap}.toolbar button,.toolbar a{width:auto;margin:0}.ok{color:#137346}.attention{color:#a35a00}
+    @media(max-width:850px){.kit-grid{grid-template-columns:1fr 1fr}}
+  </style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><div class="brand-mark">K</div><div><strong>Kit de Contingência</strong><small>RCE 008/2026 · prova estática offline</small></div></div>
+  <div class="top-actions"><a class="button ghost" href="/poc.html">← Modo POC</a><a class="button ghost" href="/dossier.html">Dossiê</a><a class="button ghost" href="/evidence-pack.html">Evidence Pack</a></div>
+</header>
+<main class="shell">
+  <section class="hero">
+    <div>
+      <p class="eyebrow">Plano B da apresentação</p>
+      <h1>ZIP autocontido e verificável para sobreviver sem rede</h1>
+      <p>Gera um pacote com Dossiê, Evidence Pack, manifesto de provenance, manifesto SHA-256, texto de verificação e um HTML estático autocontido para abrir mesmo se a aplicação não estiver disponível.</p>
+      <div class="kit-code" id="verification-code">—</div>
+    </div>
+  </section>
+
+  <div id="error" class="risk" hidden></div>
+  <div class="section-head"><div><h2>Ações</h2><p>Gere somente depois que o Dossiê estiver íntegro.</p></div><div class="toolbar"><button id="generate">Gerar kit</button><button class="ghost" id="verify">Verificar</button><button class="ghost" id="download">Baixar ZIP</button></div></div>
+  <section class="kit-grid" id="summary"></section>
+
+  <div class="section-head"><div><h2>Integridade</h2><p>Manifesto, arquivos internos, ZIP e Dossiê precisam conferir simultaneamente.</p></div></div>
+  <section class="module-grid" id="checks"></section>
+
+  <div class="section-head"><div><h2>Hashes principais</h2><p>Use esses valores para conferência técnica rápida.</p></div></div>
+  <section class="module-grid">
+    <article class="module"><h3>Manifesto</h3><div class="hash" id="manifest-hash">—</div></article>
+    <article class="module"><h3>ZIP</h3><div class="hash" id="zip-hash">—</div></article>
+  </section>
+
+  <section class="footer-note"><strong>Conteúdo esperado do ZIP</strong><ul><li><code>dossier.json</code></li><li><code>evidence-pack.json</code></li><li><code>release-provenance.json</code></li><li><code>verification.txt</code></li><li><code>presentation-summary.html</code></li><li><code>manifest.json</code></li></ul>Esse kit é contingência da apresentação. Não é backup produtivo, SBOM formal, release assinada, homologação ou substituto da habilitação documental.</section>
+</main>
+<script src="/contingency.js"></script>
+</body>
+</html>
