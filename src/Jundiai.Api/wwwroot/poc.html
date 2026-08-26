@@ -46,10 +46,11 @@
   <section class="summary-grid" id="summary"></section>
 
   <div class="section-head">
-    <div><h2>Cenário ouro</h2><p>Prepara uma jornada integrada e idempotente antes da demonstração.</p></div>
-    <button id="prepare-golden">Preparar jornada completa</button>
+    <div><h2>Preparação da banca</h2><p>Um clique prepara cenário ouro, executa 14/14, gera Evidence Pack e valida páginas, assets, ledger, integrações e blockers.</p></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button id="prepare-presentation">Preparar banca completa</button><button class="ghost" id="prepare-golden">Somente cenário ouro</button></div>
   </div>
   <section class="module-grid">
+    <article class="module" id="presentation-status"><h3>Preflight da apresentação</h3><p>Aguardando preparação. O resultado só fica READY quando todos os checks técnicos da demonstração passam.</p><div class="evidence">não promove Production Gates</div></article>
     <article class="module" id="golden-status"><h3>Pronto para preparar</h3><p>O cenário conecta regulação → agenda → teleconsulta → diagnóstico → documento → IA revisada → evidência.</p></article>
     <article class="module"><h3>Verificação automática</h3><p>O runner executa os 14 blocos contra o estado funcional e grava o resultado no Evidence Ledger.</p><a class="button" href="/verification.html">Abrir runner dos 14 blocos</a></article>
     <article class="module"><h3>Evidence Pack</h3><p>Consolida 14 blocos, integrações, Production Gates, persistência e eventos em um JSON verificável por SHA-256.</p><a class="button" href="/evidence-pack.html">Gerar pacote da banca</a></article>
