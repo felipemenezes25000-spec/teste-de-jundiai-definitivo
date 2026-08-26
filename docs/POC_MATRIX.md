@@ -29,7 +29,7 @@ Estado funcional do repositório. Esta matriz separa deliberadamente **fluxo dem
 | 11 | Farmácia / materiais / almoxarifado | IMPLEMENTADO POC | conciliação medicamentosa, ordem clínica ativa, dispensação vinculada, lote, validade, mínimos, fornecedor/NF, inventário/divergência, recall, ciência por unidade, alertas e livro demonstrativo de controlados |
 | 12 | ACS móvel/offline | IMPLEMENTADO POC | PWA offline-first, persistência local, fila de captura sem rede e sincronização posterior |
 | 13 | Cidadão + telemedicina | IMPLEMENTADO POC / EXTERNO no vídeo produtivo | Porta Digital, red flags determinísticas, consentimento/handoff idempotente, sala de espera, preflight, participantes, máquina de estados, teleconsulta e resumo clínico |
-| 14 | Analytics / gestão / evidência | IMPLEMENTADO POC | Command Center, dashboards, regulação aging, risco de abastecimento, segurança clínica, SLA, Contract Pack, runner 14/14, Evidence Ledger, CareTrace, AI Flight Recorder, Production Gates, Evidence Pack, preflight browser e Dossiê da Banca com identidade do build |
+| 14 | Analytics / gestão / evidência | IMPLEMENTADO POC | Command Center, dashboards, regulação aging, risco de abastecimento, segurança clínica, SLA, Contract Pack, runner 14/14, Evidence Ledger, CareTrace, AI Flight Recorder, Production Gates, Evidence Pack, preflight browser, Dossiê v2 com provenance runtime e Kit de Contingência verificável |
 
 ## Diferenciais HealthOS demonstráveis
 
@@ -70,15 +70,16 @@ Estado funcional do repositório. Esta matriz separa deliberadamente **fluxo dem
 7. governança de integrações;
 8. exposição dos blockers não-código.
 
-A baseline do run 30 validou **23 páginas**, **11 assets** e **8/8 checks**. Playwright/Chromium testa login + MFA, botão `Preparar banca completa`, Evidence Pack, Dossiê e superfícies críticas de apresentação.
+A baseline do run 33 validou **24 páginas**, **12 assets** e **8/8 checks**. Playwright/Chromium testa login + MFA, botão `Preparar banca completa`, Evidence Pack, Dossiê v2, Kit de Contingência e superfícies críticas de apresentação.
 
-### Dossiê da Banca e identidade do build
+### Dossiê da Banca, build e provenance runtime
 
 `POST /api/poc/dossier` congela:
 
 - o preflight da apresentação;
 - o Evidence Pack integral;
 - a identidade do build/processo;
+- o manifesto dos artefatos runtime efetivamente carregados;
 - os blockers explícitos;
 - disclaimers de não-produção.
 
@@ -90,9 +91,34 @@ O artefato recebe:
 - exportação JSON;
 - tela `/dossier.html` pronta para impressão/PDF.
 
-`GET /api/platform/build-identity` expõe revisão e run quando `JUNDIAI_BUILD_SHA`, `GITHUB_SHA` ou equivalentes são injetados. No GitHub Actions do run 30, o browser E2E comprovou que a revisão exportada pelo Dossiê era exatamente o `GITHUB_SHA` da execução.
+`GET /api/platform/build-identity` expõe revisão e run quando `JUNDIAI_BUILD_SHA`, `GITHUB_SHA` ou equivalentes são injetados.
 
-Isso é uma **prova de integridade e provenance demonstrativa**, não assinatura de release, SBOM formal ou attestation produtiva.
+`GET /api/platform/release-provenance` gera um manifesto canônico contendo:
+
+- SHA-256 de `Jundiai.Api.dll`;
+- SHA-256 de `Jundiai.Api.deps.json`;
+- SHA-256 de `Jundiai.Api.runtimeconfig.json`;
+- libraries extraídas do `.deps.json` e hash do conjunto;
+- identidade do build.
+
+No GitHub Actions do run 33, smoke e browser E2E comprovaram o vínculo `sourceRevision == GITHUB_SHA`, o manifesto íntegro e a releitura dos bytes runtime.
+
+Isso é **runtime artifact provenance demonstrativa**, não assinatura de release, SBOM formal, CycloneDX/SPDX ou attestation produtiva.
+
+### Kit de Contingência
+
+`POST /api/poc/contingency-bundle` gera um ZIP estático verificável com:
+
+- `dossier.json`;
+- `evidence-pack.json`;
+- `release-provenance.json`;
+- `verification.txt`;
+- `presentation-summary.html` autocontido;
+- `manifest.json`.
+
+O kit recebe código `KIT-XXXX-XXXX-XXXX`, SHA-256 do manifesto e SHA-256 do ZIP. O manifesto indexa tamanho e SHA-256 de cada arquivo de conteúdo. O run 33 abriu o ZIP, conferiu os seis arquivos e recalculou todos os hashes listados. O Playwright também gerou, verificou e baixou o ZIP pela interface.
+
+O Kit é **plano B de apresentação**, não backup, PITR, failover ou DR produtivo.
 
 ### Cenário Ouro
 
@@ -168,14 +194,14 @@ Há service desk demonstrativo com severidade/SLA, transições e breach, mais p
 - credenciais/homologações CadSUS, RNDS, SI-PNI, BNAFAR/Hórus, PACS/LIS etc.;
 - SBOM formal, release assinada, artifact attestation e supply-chain provenance produtiva.
 
-## Baseline técnica validada — run 30
+## Baseline técnica validada — run 33
 
 A baseline consolidada atual está detalhada em `docs/VALIDATION_BASELINE.md`.
 
 - **Data:** 26/08/2026
-- **Run:** 30
-- **Run ID:** `32954612211`
-- **Commit validado:** `9cc2edcb47b24e3523d817b9c4f3d18ad5409408`
+- **Run:** 33
+- **Run ID:** `32975517312`
+- **Commit validado:** `6800cf18e1a76a4b145efbf3a5c563662fa14003`
 - **Conclusão:** success
 
 O run comprovou em uma mesma execução:
@@ -185,13 +211,15 @@ O run comprovou em uma mesma execução:
 - restore/build Release .NET 8;
 - smokes funcional, plataforma e wave 4;
 - runner 14/14;
-- preflight 8/8, 23 páginas e 11 assets;
+- preflight 8/8, 24 páginas e 12 assets;
 - Evidence Pack íntegro;
-- Dossiê da Banca com hash/código/export e `sourceRevision == GITHUB_SHA` no CI;
-- **4 testes Chromium E2E**;
+- runtime artifact provenance com releitura dos hashes;
+- Dossiê v2 com hash/código/export e `sourceRevision == GITHUB_SHA` no CI;
+- Kit de Contingência ZIP com manifesto e hashes conferidos;
+- **5 testes Chromium E2E**;
 - PostgreSQL 16, migrations, checkpoints, recovery drill, inbox/outbox, idempotência, retry, dead-letter e requeue.
 
-Após a validação, o GitHub Actions foi retornado para **manual-only** e não houve run 31 automático.
+Após a validação, o GitHub Actions foi retornado para **manual-only** no commit `67614cda4279f61a3d55785e1caa3ac6afe9da53` e a contagem permaneceu em 33 runs.
 
 ## Bloqueador comercial/documental crítico
 
