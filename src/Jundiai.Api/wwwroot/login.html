@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Jundiaí HealthOS · Acesso seguro</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <style>
+    body{min-height:100vh;background:radial-gradient(circle at 10% 10%,rgba(25,112,255,.12),transparent 32%),#f4f7fb}
+    .auth-shell{max-width:1100px;margin:0 auto;padding:48px 24px;display:grid;grid-template-columns:1.05fr .95fr;gap:28px;align-items:start}
+    .auth-hero,.auth-card{background:#fff;border:1px solid #e3e9f2;border-radius:24px;box-shadow:0 16px 50px rgba(27,47,78,.08)}
+    .auth-hero{padding:38px;min-height:560px;display:flex;flex-direction:column;justify-content:space-between}
+    .auth-card{padding:30px}
+    .eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.14em;color:#47719f;font-weight:800}
+    h1{font-size:42px;line-height:1.02;margin:14px 0 18px;color:#10233c}
+    .lead{font-size:18px;color:#56677b;max-width:620px}
+    .security-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:28px}
+    .security-grid div{padding:16px;border-radius:16px;background:#f6f9fd;border:1px solid #e7edf5}
+    .security-grid strong{display:block;color:#18324f;margin-bottom:4px}.security-grid span{font-size:13px;color:#64758a}
+    label{display:block;font-size:13px;font-weight:700;color:#42546a;margin:16px 0 7px}
+    input,select{width:100%;padding:13px 14px;border:1px solid #d7e0ea;border-radius:12px;background:#fff;font:inherit;box-sizing:border-box}
+    button{margin-top:18px;width:100%;padding:13px 16px;border:0;border-radius:12px;background:#163f70;color:#fff;font-weight:800;cursor:pointer}
+    button.secondary{background:#eef4fb;color:#163f70}
+    .message{margin-top:16px;padding:12px;border-radius:12px;background:#f6f9fd;color:#41566f;font-size:14px;white-space:pre-wrap}.message.error{background:#fff1f1;color:#9d2626}
+    .users{margin-top:24px;border-top:1px solid #edf1f5;padding-top:18px}.user{display:flex;justify-content:space-between;gap:14px;padding:10px 0;border-bottom:1px dashed #e8edf3;font-size:13px}.user b{color:#203b5a}.user span{color:#697b8f;text-align:right}
+    .note{font-size:12px;color:#7a8a9c;margin-top:18px;line-height:1.45}
+    @media(max-width:850px){.auth-shell{grid-template-columns:1fr;padding:22px}.auth-hero{min-height:auto}h1{font-size:34px}}
+  </style>
+</head>
+<body>
+  <main class="auth-shell">
+    <section class="auth-hero">
+      <div>
+        <p class="eyebrow">RCE 008/2026 · Segurança demonstrável</p>
+        <h1>Identidade, MFA e RBAC sem atalhos silenciosos</h1>
+        <p class="lead">A POC separa autenticação de autorização, exige segundo fator nos perfis sensíveis e mantém política default-deny para APIs internas.</p>
+        <div class="security-grid">
+          <div><strong>PBKDF2-SHA256</strong><span>senha derivada com salt individual</span></div>
+          <div><strong>MFA</strong><span>obrigatório em administração, gestão, regulação, farmácia e auditoria</span></div>
+          <div><strong>Lockout</strong><span>bloqueio temporário após tentativas falhas</span></div>
+          <div><strong>RBAC</strong><span>permissão explícita por domínio, escrita clínica separada da gestão</span></div>
+        </div>
+      </div>
+      <div class="note">Ambiente demonstrativo. O provedor de identidade e o segundo fator desta POC não são apresentados como infraestrutura de produção.</div>
+    </section>
+
+    <section class="auth-card">
+      <p class="eyebrow">Acesso da POC</p>
+      <h2>Entrar</h2>
+      <label for="username">Usuário</label>
+      <input id="username" value="admin.jundiai" autocomplete="username" />
+      <label for="password">Senha</label>
+      <input id="password" type="password" value="Jundiai#008" autocomplete="current-password" />
+      <button id="login">Autenticar</button>
+
+      <div id="mfa" hidden>
+        <label for="code">Segundo fator</label>
+        <input id="code" inputmode="numeric" value="008026" maxlength="8" />
+        <button id="verify">Validar MFA</button>
+      </div>
+      <div class="message" id="message">Use uma das identidades demonstrativas abaixo.</div>
+      <button class="secondary" id="continue" hidden>Ir para o modo POC</button>
+
+      <div class="users">
+        <strong>Perfis disponíveis</strong>
+        <div id="users">carregando…</div>
+      </div>
+      <p class="note">As credenciais são exclusivamente de demonstração e estão versionadas porque este repositório é público. Nenhuma credencial real de RenoveJá, CIJUN, município ou fornecedor é usada aqui.</p>
+    </section>
+  </main>
+<script>
+let challengeId = null;
+const message = document.getElementById('message');
+const show = (text, error=false) => { message.textContent=text; message.className='message'+(error?' error':''); };
+const saveSession = result => {
+  localStorage.setItem('jundiai.session', result.sessionToken);
+  localStorage.setItem('jundiai.role', result.role || 'poc_admin');
+  localStorage.setItem('jundiai.user', result.userName || 'poc');
+  show(`Autenticado como ${result.userName} · papel ${result.role} · MFA ${result.mfaVerified?'validado':'não exigido'}.`);
+  document.getElementById('continue').hidden=false;
+};
+async function json(url, options={}) {
+  const r=await fetch(url,{...options,headers:{'Content-Type':'application/json',...(options.headers||{})}});
+  const body=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(body.detail||body.title||`HTTP ${r.status}`);
+  return body;
+}
+async function loadUsers(){
+  try{
+    const users=await json('/api/auth/demo-users');
+    document.getElementById('users').innerHTML=users.map(u=>`<div class="user"><b>${u.userName}</b><span>${u.displayName}<br>${u.role}${u.requiresMfa?' · MFA':''}</span></div>`).join('');
+  }catch(e){show(e.message,true)}
+}
+document.getElementById('login').onclick=async()=>{
+  try{
+    const result=await json('/api/auth/login',{method:'POST',body:JSON.stringify({userName:username.value,password:password.value})});
+    if(result.status==='mfa_required'){
+      challengeId=result.challengeId; document.getElementById('mfa').hidden=false; show(result.message);
+    }else saveSession(result);
+  }catch(e){show(e.message,true)}
+};
+document.getElementById('verify').onclick=async()=>{
+  try{saveSession(await json('/api/auth/mfa/verify',{method:'POST',body:JSON.stringify({challengeId,code:code.value})}));document.getElementById('mfa').hidden=true}catch(e){show(e.message,true)}
+};
+document.getElementById('continue').onclick=()=>location.href='/poc.html';
+loadUsers();
+</script>
+</body>
+</html>
