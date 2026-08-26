@@ -1,74 +1,89 @@
 # Matriz POC — Jundiaí RCE 008/2026
 
-Estado funcional deste repositório. Esta matriz diferencia implementação demonstrável de integração/homologação externa.
+Estado funcional do repositório. Esta matriz separa deliberadamente **fluxo demonstrável**, **industrialização** e **integração/homologação externa**.
 
-Legenda:
+## Legenda
 
-- **IMPLEMENTADO**: fluxo navegável e API existem neste repositório.
-- **PARCIAL**: fluxo principal existe, mas faltam subitens avançados do edital.
-- **EXTERNO**: depende de credencial, layout oficial, homologação ou ambiente do contratante/órgão público.
-- **PENDENTE**: ainda não existe implementação suficiente aqui.
+- **IMPLEMENTADO POC**: API + regra + fluxo demonstrável existem neste repositório.
+- **PARCIAL**: núcleo existe, mas depende de maior profundidade, persistência, integração ou dado real.
+- **EXTERNO**: depende de credencial, fornecedor, layout, homologação ou autorização oficial.
+- **OPERACIONAL**: depende de equipe/processo/SLA além do software.
 
-| Bloco da POC | Estado | Evidência atual |
-|---|---|---|
-| Administração / segurança / auditoria | IMPLEMENTADO para POC | RBAC por papel/permissão, default-deny em APIs internas, trilha de eventos e headers básicos |
-| Gestão de cadastros | PARCIAL | cidadão, CNS/CPF, unidade, território, área/microárea e diretório demonstrativo de 58 unidades; CadSUS real é EXTERNO |
-| Regulação | IMPLEMENTADO | fila, prioridade, origem/destino, transição e handoff da Porta Digital |
-| Agendamento consultas/exames | PARCIAL | regulação, agenda diagnóstica e mutirões; grades/cotas/encaixes completos ainda precisam expansão |
-| Recepção UBS / ambulatório | IMPLEMENTADO | check-in, fila, prioridade e chamada para sala |
-| PEP multiprofissional | IMPLEMENTADO para POC | Patient 360, timeline, condições, alergias, medicamentos, vitais e workspaces profissionais |
-| Odontologia | PARCIAL | odontograma estruturado por elemento/faces + histórico; gráfico anatômico coroa/raiz e produção por sextante ainda faltam |
-| Exames laboratório/imagem | PARCIAL alto | pedido, agenda, unidade, executor e mutirão; anexos/resultados estruturados e integração PACS/LIS ainda serão ampliados |
-| PSF / território | IMPLEMENTADO para POC | área, microárea, domicílio, família, ACS, cadastro individual/domiciliar e visita |
-| ACS offline/online | IMPLEMENTADO | PWA com fila local, captura offline e sincronização posterior |
-| Fichas APS/e-SUS | IMPLEMENTADO como demonstração | cadastro individual, domiciliar e visita + exportação explicitamente demonstrativa |
-| e-SUS oficial | EXTERNO/PARCIAL | layout/transmissão oficial dependem de contrato computacional e homologação aplicáveis |
-| Vacinação | IMPLEMENTADO para POC | vacina, lote, validade, dose, via, local, profissional/COREN, baixa de estoque e campanhas |
-| RNDS / SI-PNI | EXTERNO | não simular homologação; adapter deve operar apenas após credenciais e homologação oficiais |
-| Faturamento SUS | IMPLEMENTADO como fundação POC | produção nominal, competência, críticas, fechamento e exportação demonstrativa |
-| BPA/e-SUS oficial | PARCIAL/EXTERNO | faltam todos os layouts oficiais aplicáveis, retificações e validações normativas completas |
-| Farmácia / dispensação | IMPLEMENTADO para POC | lote, validade, mínimo, controlado, prescrição, dispensação e rastreabilidade |
-| Almoxarifado central | IMPLEMENTADO como fundação | entrada, fornecedor/NF de referência, lotes, mínimos, transferências e movimentos; XML fiscal/inventário cego completo ainda faltam |
-| Digitalização de prontuário | IMPLEMENTADO como fundação | barcode, páginas, origem, referência física, retirada, devolução e custódia |
-| Portal/app cidadão + telemedicina | PARCIAL alto | Porta Digital navegável, red flags, roteamento, consentimento e handoff idempotente; videoteleconsulta completa será portada depois |
-| BI / dashboards | IMPLEMENTADO para POC | centro de comando com KPIs e módulos operacionais |
-| Suporte / operação 24x7 | OPERACIONAL, não software | exige equipe e processo contratual fora deste repositório |
+> Regra central: **IMPLEMENTADO POC != HOMOLOGADO != PRODUÇÃO**.
 
-## O que este repositório já permite demonstrar de ponta a ponta
+## 14 blocos
 
-1. cidadão entra na Porta Digital;
-2. red flags determinísticas bloqueiam jornada eletiva quando há sinal de emergência;
-3. caso não emergencial gera rota sugerida e revisão humana obrigatória;
-4. consentimento cria handoff idempotente para a regulação;
-5. recepção da UBS registra chegada e chama o cidadão;
-6. Patient 360 apresenta contexto longitudinal e workspaces multiprofissionais;
-7. exames podem ser agendados e agrupados em mutirão;
-8. produção nominal alimenta lote de faturamento SUS demonstrativo;
-9. lote recebe críticas e pode ser fechado quando válido;
-10. vacinação controla lote/validade/dose/via/local/profissional e reduz estoque;
-11. farmácia dispensa por cidadão e prescrição, com regra específica para controlados;
-12. almoxarifado controla entrada e transferência para unidade;
-13. PSF organiza território, família, ficha individual, domicílio e visitas;
-14. ACS captura visita offline e sincroniza depois;
-15. acervo físico/digitalizado recebe barcode e trilha de custódia;
-16. todas as mutações relevantes geram eventos de auditoria.
+| # | Bloco | Estado | Evidência atual |
+|---:|---|---|---|
+| 1 | Administração, segurança e auditoria | IMPLEMENTADO POC | login demonstrativo, PBKDF2-SHA256, lockout, MFA em perfis sensíveis, sessão randômica, RBAC default-deny, auditoria e ledger SHA-256 encadeado |
+| 2 | Cadastros | PARCIAL alto | cidadão, CPF/CNS, unidade, território, área/microárea, 58 unidades demo, workspace de migração; CadSUS é EXTERNO |
+| 3 | Regulação | IMPLEMENTADO POC | fila, prioridade, origem/destino, transições, handoff da Porta Digital e rastreabilidade |
+| 4 | Agendamento | IMPLEMENTADO POC | grades, slots, cotas, bloqueio, capacidade/encaixe, fila de espera e promoção por prioridade |
+| 5 | Recepção | IMPLEMENTADO POC | check-in, prioridade, fila, chamada, sala e profissional |
+| 6 | PEP multiprofissional / odontologia | IMPLEMENTADO POC | Patient 360, workspaces profissionais, encontros, documentos clínicos, odontograma FDI por superfície, periodontal por sextante e produção odontológica |
+| 7 | Laboratório e imagem | IMPLEMENTADO POC / EXTERNO nas integrações | pedido, agenda, coleta, execução, laudo, resultado crítico/ciência, anexos e metadados; PACS/LIS reais são EXTERNOS |
+| 8 | Saúde da Família / território | IMPLEMENTADO POC | família, domicílio, área, microárea, ACS, cadastro individual/domiciliar e visita APS |
+| 9 | Imunização | IMPLEMENTADO POC / EXTERNO na transmissão | lote, validade, dose, via, local, profissional, baixa de estoque e campanhas; RNDS/SI-PNI real é EXTERNO |
+| 10 | Produção e faturamento SUS | IMPLEMENTADO POC / PARCIAL oficial | produção nominal, catálogo SIGTAP reduzido, críticas CBO/idade/sexo/dente/sextante, competência, fechamento, reabertura, histórico e checksum; arquivo oficial vigente é etapa de implantação |
+| 11 | Farmácia / materiais / almoxarifado | IMPLEMENTADO POC | dispensação, lote, validade, mínimos, fornecedor/NF, inventário e divergência, recall por lote, ciência por unidade, alertas e livro demonstrativo de controlados |
+| 12 | ACS móvel/offline | IMPLEMENTADO POC | PWA, persistência local, captura sem rede e sincronização posterior |
+| 13 | Cidadão + telemedicina | IMPLEMENTADO POC / EXTERNO no vídeo produtivo | Porta Digital, red flags determinísticas, consentimento/handoff idempotente, sala de espera, preflight, participantes, máquina de estados e resumo clínico |
+| 14 | Analytics / gestão / evidência | IMPLEMENTADO POC | dashboard executivo, regulação aging, risco de abastecimento, segurança clínica, SLA, Contract Pack, Evidence Ledger, CareTrace e AI Flight Recorder |
 
-## Gaps que continuam importantes
+## Diferenciais HealthOS já demonstráveis
 
-- persistência PostgreSQL e isolamento real por instituição/unidade;
-- autenticação real/MFA em vez de papel demonstrativo por header;
-- grades complexas, cotas, encaixes, bloqueios e perda de agenda;
-- odontograma anatômico completo e faturamento por elemento/sextante;
-- resultados/anexos diagnósticos, PACS/DICOM e LIS quando aplicável;
-- layouts BPA/e-SUS oficiais, retificação, reabertura e críticas completas;
-- XML de nota fiscal, inventário completo, recall e BNAFAR;
-- integração CadSUS, RNDS, SI-PNI, BNAFAR e demais serviços governamentais mediante credenciais/homologação;
-- videoteleconsulta e documentos assinados portados da base RenoveJá;
-- migração de legado real da CIJUN;
-- evidência de produção, disponibilidade, backup/DR e segurança operacional.
+### Contract Pack Jundiaí
 
-## Regra de honestidade
+`/api/contract/jundiai/readiness` calcula aderência dos 14 blocos e mantém uma lista explícita de bloqueadores não resolvidos por código. `/poc.html` transforma isso em cockpit para a banca.
 
-`IMPLEMENTADO != HOMOLOGADO != PRODUÇÃO`.
+### Cenário Ouro
 
-Nenhuma integração governamental deve ser apresentada como operacional sem credencial, contrato computacional oficial, homologação e evidência externa.
+`POST /api/poc/scenarios/golden-path` prepara, de forma idempotente, uma jornada integrada contendo:
+
+1. regulação;
+2. agendamento;
+3. teleconsulta completa;
+4. diagnóstico e resultado;
+5. documento clínico com hash e assinatura demonstrativa;
+6. decisão de IA registrada e revisada por humano;
+7. evidências encadeadas.
+
+### CareTrace
+
+`/caretrace.html` reúne eventos de território, ACS, regulação, imunização, farmácia, diagnóstico, telemedicina, documentos, odontologia e produção SUS numa visão longitudinal, preservando a origem de cada evento e sinalizando lacunas de continuidade.
+
+### Governança de IA
+
+O AI Flight Recorder registra modelo, versão, prompt, hash de entrada/saída, confiança, risco, necessidade de revisão humana, resultado da revisão e eventual override. Prescrição autônoma é explicitamente proibida na política da POC e red flags de emergência não são delegadas a IA generativa.
+
+### Registro de integrações
+
+CadSUS, RNDS, SI-PNI, e-SUS APS, DATASUS BPA, SIGTAP, BNAFAR/Hórus, PACS, LIS, gov.br, ICP-Brasil, carimbo do tempo e vídeo são tratados como integrações governadas. O sistema **não permite marcar homologado/produção sem referência de evidência**.
+
+### Migração de legado
+
+Há workspace com manifesto SHA-256 de origem, mapping campo-a-campo, validação, quarentena, reconciliação e aceite. Isso demonstra método; não afirma migração real sem acesso formal ao legado CIJUN.
+
+### Operação e treinamento
+
+Há service desk demonstrativo com severidade/SLA, transições e breach, mais plano de treinamento, turmas, capacidade e lista de presença. Cobertura contratual 24x7 e equipe dedicada continuam OPERACIONAIS.
+
+## O que ainda é industrialização de produção
+
+- PostgreSQL como fonte transacional de verdade em substituição aos stores em memória;
+- migrations, retenção, arquivo e isolamento real por instituição/unidade;
+- IdP/MFA produtivos, secret manager e ciclo de certificados;
+- observabilidade central, SLO/SLA, correlação, alertas e SOC/processo de incidente;
+- backup, PITR, restauração testada, DR e RTO/RPO contratual;
+- outbox/inbox, retries e idempotência persistente para integrações;
+- testes de carga/capacidade com volumetria real municipal;
+- E2E em navegador cobrindo os 14 blocos;
+- implantação e migração reais do legado CIJUN;
+- assinatura ICP-Brasil/carimbo de tempo reais;
+- provedor de vídeo e rede TURN conforme arquitetura final;
+- layouts/protocolos oficiais vigentes de DATASUS/e-SUS e demais sistemas;
+- credenciais/homologações CadSUS, RNDS, SI-PNI, BNAFAR/Hórus, PACS/LIS etc.
+
+## Bloqueador comercial/documental crítico
+
+A qualidade da POC **não substitui a habilitação**. A comprovação de capacidade técnica exigida pelo certame — incluindo o requisito relacionado ao quantitativo de unidades de saúde identificado na análise do edital — deve ser resolvida documentalmente em paralelo.
