@@ -71,18 +71,19 @@ public sealed class DiagnosticsAdvancedStore
 {
     private readonly ConcurrentDictionary<Guid, DiagnosticOrderV2> _orders = new();
 
-    public DiagnosticsAdvancedStore()
+    public DiagnosticsAdvancedStore(DemoStore demo)
     {
+        var citizen = demo.Citizens().FirstOrDefault() ?? throw new InvalidOperationException("POC sem cidadão seed para diagnóstico.");
         var id = Guid.NewGuid();
         _orders[id] = new DiagnosticOrderV2(
             id,
-            Guid.Parse("11111111-1111-1111-1111-111111111111"),
-            "Maria da Silva",
+            citizen.Id,
+            citizen.Name,
             "0202020380",
             "Hemograma completo",
             "laboratory",
             "routine",
-            "UBS Vila Hortolândia",
+            citizen.HealthUnit,
             "Laboratório Municipal",
             "Dr. Eduardo Martins",
             "CRM 000001",
