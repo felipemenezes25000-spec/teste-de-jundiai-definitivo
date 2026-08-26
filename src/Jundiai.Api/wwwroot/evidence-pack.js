@@ -1,5 +1,5 @@
 const packToken=()=>localStorage.getItem('jundiai.session');
-const packHeaders=(extra={})=>({'Content-Type':'application/json',...(packToken()?{Authorization:`Bearer ${packToken()}`}:{'X-Demo-Role':'poc_admin','X-Demo-User':'poc.operador'}),...extra});
+const packHeaders=(extra={})=>({'Content-Type':'application/json',...(packToken()?{Authorization:`Bearer ${packToken()}`}:{}),...extra});
 const packEsc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 async function packApi(url,options={}){
