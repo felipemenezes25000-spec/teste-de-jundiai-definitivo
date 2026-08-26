@@ -1,13 +1,12 @@
 const q = s => document.querySelector(s);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const session = () => localStorage.getItem('jundiai.session');
-const role = () => localStorage.getItem('jundiai.role') || 'poc_admin';
 let current = null;
 
 function authHeaders(extra = {}) {
   const token = session();
   return {
-    ...(token ? { Authorization: `Bearer ${token}` } : { 'X-Demo-Role': role(), 'X-Demo-User': localStorage.getItem('jundiai.user') || 'poc.operador' }),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...extra
   };
 }
@@ -44,6 +43,7 @@ function render(artifact) {
   const pack = payload.evidencePack;
   const build = payload.build;
   const release = payload.release;
+  const inventory = release.payload.dependencyInventory || {};
   const blocks = pack.payload.blocks || [];
   const blockers = preflight.nonCodeBlockers || pack.payload.nonCodeBlockers || [];
 
@@ -58,8 +58,8 @@ function render(artifact) {
     ['Score', `${preflight.overallScore}%`, 'readiness POC'],
     ['Runtime', `${release.payload.files.filter(x => x.exists).length}/${release.payload.files.length}`, 'artefatos hasheados'],
     ['Libraries', release.payload.runtimeLibraries.length, 'extraídas do .deps.json'],
+    ['Inventário', inventory.exists ? 'HASHED' : 'AUSENTE', inventory.formalSbom ? 'SBOM formal' : 'POC · não é SBOM'],
     ['Blockers', blockers.length, 'não resolvidos por código'],
-    ['Gerado', new Date(payload.generatedAt).toLocaleString('pt-BR'), 'captura do dossiê'],
     ['Build', build.sourceRevision ? build.sourceRevision.slice(0, 12) : 'não injetado', build.sourceRevisionInjected ? 'revisão do processo' : 'defina JUNDIAI_BUILD_SHA']
   ].map(x => metric(...x)).join('');
 
@@ -71,6 +71,7 @@ function render(artifact) {
     <div class="row"><span>RID</span><strong>${esc(build.runtimeIdentifier)}</strong></div>
     <div class="row"><span>artefatos</span><strong>${release.payload.files.filter(x => x.exists).length}/${release.payload.files.length}</strong></div>
     <div class="row"><span>libraries runtime</span><strong>${release.payload.runtimeLibraries.length}</strong></div>
+    <div class="row"><span>inventário POC</span><strong>${inventory.exists ? 'embarcado' : 'ausente'} · ${inventory.formalSbom ? 'SBOM' : 'não é SBOM formal'}</strong></div>
   </div><p><small>${esc(build.note)}</small></p>`;
 
   q('#hash-proof').innerHTML = `<h3>Hashes</h3>
@@ -78,7 +79,8 @@ function render(artifact) {
     <p><strong>Evidence Pack</strong></p><div class="hash">${esc(pack.packageSha256)}</div>
     <p><strong>Manifesto runtime</strong></p><div class="hash">${esc(release.manifestSha256)}</div>
     <p><strong>Libraries runtime</strong></p><div class="hash">${esc(release.payload.runtimeLibrariesSha256)}</div>
-    <p><small>${esc(artifact.hashAlgorithm)} · ${esc(artifact.canonicalization)}</small></p>`;
+    <p><strong>Inventário POC de dependências</strong></p><div class="hash">${esc(inventory.sha256 || 'ausente')}</div>
+    <p><small>${esc(artifact.hashAlgorithm)} · ${esc(artifact.canonicalization)} · inventário POC ≠ SBOM formal</small></p>`;
 
   q('#blocks').innerHTML = blocks.map(block => `<article class="block-line">
     <span class="num">${String(block.block).padStart(2, '0')}</span>
