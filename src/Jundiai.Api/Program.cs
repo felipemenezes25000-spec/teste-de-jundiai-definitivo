@@ -37,6 +37,7 @@ builder.Services.AddSingleton<PocVerificationRunnerStore>();
 builder.Services.AddSingleton<PrivacyGovernanceStore>();
 builder.Services.AddJundiaiPersistence(builder.Configuration);
 builder.Services.AddSingleton<PersistenceRecoveryService>();
+builder.Services.AddSingleton<IntegrationMessagingPersistenceService>();
 builder.Services.AddJundiaiOperationalTelemetry();
 
 var app = builder.Build();
@@ -109,6 +110,7 @@ app.MapPocVerificationRunnerEndpoints();
 app.MapPlatformReadinessEndpoints();
 app.MapJundiaiPersistenceEndpoints();
 app.MapPersistenceRecoveryEndpoints();
+app.MapIntegrationMessagingPersistenceEndpoints();
 app.MapPrivacyGovernanceEndpoints();
 
 app.MapGet("/api/regulation", (DemoStore store) => Results.Ok(store.Regulation()));
