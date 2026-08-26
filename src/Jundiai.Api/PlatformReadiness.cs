@@ -8,7 +8,7 @@ public static class PlatformReadinessEndpoints
         endpoints.MapGet("/api/contract/platform/architecture", () => Results.Ok(new
         {
             application = ".NET 8 ASP.NET Core modular monolith POC",
-            targetPersistence = "PostgreSQL with migrations, transactions and tenant/institution scoping",
+            targetPersistence = "PostgreSQL EF Core with migrations, transactions and tenant/institution scoping",
             targetCaching = "Redis for ephemeral coordination/cache only; never source of truth for clinical records",
             integrationPattern = "versioned adapters + transactional outbox/inbox + idempotency keys",
             audit = "immutable-oriented event/evidence retention with production-grade storage policy",
@@ -27,29 +27,29 @@ public static class PlatformReadinessModel
     {
         currentPoc = new
         {
-            persistence = "in-memory process state",
+            persistence = "in-memory default with optional PostgreSQL EF Core foundation, migration, checkpoint, outbox and tenant scope",
             authentication = "in-memory demo identity/session + MFA demonstration",
             secrets = "no production secrets required or committed",
             deployment = "Docker-ready",
-            evidence = "in-memory SHA-256 chain",
+            evidence = "in-memory SHA-256 chain with durable checkpoint bridge when PostgreSQL is configured",
             status = "POC"
         },
         productionGates = new[]
         {
-            Gate("PERSIST-01", "PostgreSQL persistence", "required", "Migrate domain state from singleton in-memory stores to transactional repositories."),
-            Gate("PERSIST-02", "Migrations and data retention", "required", "Versioned schema migrations, archival and retention policy for clinical/audit records."),
+            Gate("PERSIST-01", "PostgreSQL foundation", "foundation_implemented", "DbContext, tenant scope, migration and durable checkpoint bridge implemented; production must migrate domain stores fully."),
+            Gate("PERSIST-02", "Migrations and data retention", "migration_foundation", "Initial versioned migration exists; archival, retention and full domain schema remain production work."),
             Gate("SEC-01", "Production IdP/MFA", "required", "Integrate institutional identity provider and production-grade second factor/session lifecycle."),
             Gate("SEC-02", "Secrets and certificates", "required", "Store credentials/certificates exclusively in managed secret storage; never source control."),
             Gate("OBS-01", "Observability", "required", "Central logs, metrics, traces, alerting, correlation IDs and operational dashboards."),
             Gate("DR-01", "Backup/PITR/restore", "required", "Automated backups plus tested restoration and point-in-time recovery."),
             Gate("DR-02", "Disaster recovery", "required", "RTO/RPO contractually defined, runbook, failover and drills."),
-            Gate("INT-01", "Outbox/inbox/idempotency", "required", "Reliable integration delivery and deduplication across external systems."),
+            Gate("INT-01", "Outbox/idempotency", "foundation_implemented", "Transactional outbox and persisted idempotency schema implemented; workers/inbox for each external adapter remain."),
             Gate("PERF-01", "Load/capacity testing", "required", "Validate concurrency and volumetry against municipal estimates before go-live."),
             Gate("LGPD-01", "Privacy lifecycle", "required", "Access purpose, retention, minimization, data subject workflows and incident response."),
             Gate("DEPLOY-01", "Production deployment", "required", "Environment isolation, release approvals, health probes, rollback and change evidence."),
-            Gate("E2E-01", "Browser E2E", "required", "Automated browser journeys for the 14 POC blocks and critical production workflows.")
+            Gate("E2E-01", "Browser E2E", "partial", "Large smoke covers API journeys and page availability; real browser interaction automation remains to be added.")
         },
-        rule = "A readiness da POC não muda automaticamente o status de nenhum production gate."
+        rule = "Uma fundação implementada reduz risco técnico, mas não transforma automaticamente a POC em produção."
     };
 
     private static object Gate(string id, string name, string status, string description) => new { id, name, status, description };
