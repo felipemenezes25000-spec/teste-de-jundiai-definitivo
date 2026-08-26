@@ -52,8 +52,19 @@ public static class AuthSecurityEndpoints
             anonymousProtectedApi = "401-fail-closed",
             demoRoleHeaderEnabled = DemoAccessControlMiddleware.DemoRoleHeaderEnabled,
             demoRoleHeaderPolicy = "disabled-by-default; enable only with JUNDIAI_ALLOW_DEMO_ROLE_HEADER=true",
+            responseHeaders = new
+            {
+                pocMarker = "X-Jundiai-POC: RCE-008-2026",
+                contentTypeOptions = "nosniff",
+                frameOptions = "SAMEORIGIN",
+                referrerPolicy = "same-origin",
+                permissionsPolicy = "camera=(self), microphone=(self), geolocation=(self)",
+                contentSecurityPolicy = "pending-production-hardening",
+                strictTransportSecurity = "edge/TLS-dependent; pending-final-deployment",
+                sensitiveApiCacheControl = "pending-production-hardening"
+            },
             seededUsers = store.DemoUsers().Count,
-            productionNote = "POC identity store only; production must use persistent identity provider, secret-backed MFA and audited token lifecycle."
+            productionNote = "POC identity store only; production must use persistent identity provider, secret-backed MFA, audited token lifecycle, CSP/cache policy and final TLS/HSTS controls."
         }));
 
         return endpoints;
