@@ -17,7 +17,7 @@ function browserProblems(page) {
   const problems = [];
   page.on('pageerror', error => problems.push(`pageerror: ${error.message}`));
   page.on('console', message => {
-    if (message.type() === 'error') problems.push(`console: ${message.text()}`);
+    if (message.type() === 'error') problems.push(`console: ${message.text()}`));
   });
   page.on('response', response => {
     const type = response.request().resourceType();
@@ -32,6 +32,29 @@ async function streamToBuffer(stream) {
   const chunks = [];
   for await (const chunk of stream) chunks.push(Buffer.from(chunk));
   return Buffer.concat(chunks);
+}
+
+async function assertSemanticShell(page, route) {
+  await expect(page.locator('html')).toHaveAttribute('lang', /pt-BR/i);
+  await expect(page.locator('main')).toBeVisible();
+  expect(await page.locator('h1:visible').count(), `${route} precisa de H1 visível`).toBeGreaterThan(0);
+
+  const unnamedButtons = await page.locator('button:visible').evaluateAll(buttons => buttons
+    .filter(button => {
+      const text = (button.textContent || '').trim();
+      const aria = (button.getAttribute('aria-label') || '').trim();
+      const labelledBy = (button.getAttribute('aria-labelledby') || '').trim();
+      const title = (button.getAttribute('title') || '').trim();
+      return !text && !aria && !labelledBy && !title;
+    })
+    .map(button => button.id || button.outerHTML.slice(0, 120)));
+  expect(unnamedButtons, `${route} tem botão sem nome acessível`).toEqual([]);
+
+  const overflow = await page.evaluate(() => ({
+    scrollWidth: document.documentElement.scrollWidth,
+    clientWidth: document.documentElement.clientWidth
+  }));
+  expect(overflow.scrollWidth, `${route} não deve criar overflow horizontal`).toBeLessThanOrEqual(overflow.clientWidth + 2);
 }
 
 test('login + MFA + Preparar Banca deixam o cockpit READY', async ({ page }) => {
@@ -115,8 +138,11 @@ test('Dossiê da Banca congela READY, build, runtime e Evidence Pack em artefato
   expect(exported.payload.build.contract).toBe('RCE 008/2026');
   expect(exported.payload.release.manifestSha256).toMatch(/^[a-f0-9]{64}$/);
   expect(exported.payload.release.payload.runtimeArtifactsComplete).toBe(true);
-  expect(exported.payload.release.payload.files).toHaveLength(3);
+  expect(exported.payload.release.payload.files).toHaveLength(4);
   expect(exported.payload.release.payload.files.every(item => item.exists && /^[a-f0-9]{64}$/.test(item.sha256))).toBe(true);
+  expect(exported.payload.release.payload.dependencyInventory.exists).toBe(true);
+  expect(exported.payload.release.payload.dependencyInventory.formalSbom).toBe(false);
+  expect(exported.payload.release.payload.dependencyInventory.sha256).toMatch(/^[a-f0-9]{64}$/);
   expect(exported.payload.preflight.nonCodeBlockers.some(item => item.id === 'HAB-AT-29')).toBe(true);
   if (process.env.GITHUB_SHA) expect(exported.payload.build.sourceRevision).toBe(process.env.GITHUB_SHA);
 });
@@ -182,4 +208,36 @@ test('superfícies críticas da apresentação renderizam sem erro fatal de brow
     await page.waitForTimeout(300);
     expect(problems, `problemas em ${route}`).toEqual([]);
   }
+});
+
+test('telas-chave mantêm semântica mínima e não estouram horizontalmente em mobile, tablet e desktop', async ({ page }) => {
+  await authenticate(page);
+  const routes = ['/poc.html', '/dossier.html', '/contingency.html', '/governance.html', '/citizen.html', '/acs.html'];
+  const viewports = [
+    { name: 'mobile', width: 390, height: 844 },
+    { name: 'tablet', width: 768, height: 1024 },
+    { name: 'desktop', width: 1366, height: 768 }
+  ];
+
+  for (const viewport of viewports) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    for (const route of routes) {
+      const response = await page.goto(route, { waitUntil: 'domcontentloaded' });
+      expect(response.status(), `${viewport.name} ${route}`).toBeLessThan(400);
+      await page.waitForTimeout(150);
+      await assertSemanticShell(page, `${viewport.name} ${route}`);
+    }
+  }
+});
+
+test('login possui rótulos de formulário e navegação por teclado alcança controle interativo', async ({ page }) => {
+  await page.goto('/login.html', { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('label[for="username"]')).toBeVisible();
+  await expect(page.locator('label[for="password"]')).toBeVisible();
+  await expect(page.locator('#username')).toHaveAttribute('autocomplete', 'username');
+  await expect(page.locator('#password')).toHaveAttribute('autocomplete', 'current-password');
+  await page.locator('body').click({ position: { x: 1, y: 1 } });
+  await page.keyboard.press('Tab');
+  const activeTag = await page.evaluate(() => document.activeElement?.tagName?.toLowerCase());
+  expect(['a', 'button', 'input', 'select', 'textarea']).toContain(activeTag);
 });
