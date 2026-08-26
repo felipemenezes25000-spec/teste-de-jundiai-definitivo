@@ -38,6 +38,8 @@ app.MapGet("/api/citizens", (DemoStore store) => Results.Ok(store.Citizens()));
 app.MapGet("/api/citizens/{id:guid}", (Guid id, DemoStore store) =>
     store.Citizen(id) is { } citizen ? Results.Ok(citizen) : Results.NotFound());
 
+app.MapClinicalEndpoints();
+
 app.MapGet("/api/regulation", (DemoStore store) => Results.Ok(store.Regulation()));
 app.MapPost("/api/regulation", (CreateRegulationRequest request, DemoStore store) =>
     Execute(() => Results.Created("/api/regulation", store.CreateRegulation(request))));
