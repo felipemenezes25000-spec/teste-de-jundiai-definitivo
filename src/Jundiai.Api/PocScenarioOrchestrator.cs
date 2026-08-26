@@ -22,23 +22,33 @@ public static class PocScenarioEndpoints
             DemoStore demo,
             MunicipalOperationsStore operations,
             DemoIdentityStore identities,
+            CitizenMasterDataStore masterData,
             SchedulingStore scheduling,
+            ClinicalOrderStore clinical,
             DiagnosticsAdvancedStore diagnostics,
+            ImmunizationAdvancedStore immunization,
             SusBillingEngineStore billing,
             InventoryAdvancedStore inventory,
+            PharmacyCareStore pharmacy,
             TelemedicineStore telemedicine,
             EvidenceLedgerStore evidence,
             IntegrationRegistryStore integrations,
             LegacyMigrationStore migration,
             OperationalReadinessStore ops,
-            AiGovernanceStore ai) => Results.Ok(new
+            AiGovernanceStore ai,
+            ProfessionalRegistryStore professionals,
+            ReferralNetworkStore referrals,
+            PocVerificationRunnerStore verification) => Results.Ok(new
         {
-            contract = contract.Readiness(demo, operations, identities, scheduling, diagnostics, billing, inventory, telemedicine, evidence),
+            contract = contract.Readiness(demo, operations, identities, masterData, scheduling, clinical, diagnostics, immunization, billing, inventory, pharmacy, telemedicine, evidence),
             evidence = evidence.Verify(),
             integrations = integrations.Readiness(),
             migration = new { batches = migration.Batches().Count, accepted = migration.Batches().Count(x => x.Status == "accepted") },
             operations = ops.SlaDashboard(),
             ai = new { decisions = ai.Decisions(null).Count, policies = ai.Policies().Count },
+            workforce = new { professionals = professionals.Search(null, null).Count, credentialAlerts = professionals.CredentialAlerts().Count },
+            referrals = new { total = referrals.Referrals(null).Count, open = referrals.Referrals(null).Count(x => x.Status is "requested" or "accepted"), counterReferred = referrals.Referrals(null).Count(x => x.Status == "counter_referred") },
+            verification = verification.Latest() is { } latest ? new { latest.Id, latest.Status, latest.PassedBlocks, latest.TotalBlocks, latest.OverallScore, latest.GeneratedAt } : null,
             generatedAt = DateTimeOffset.UtcNow
         }));
         return endpoints;
