@@ -267,15 +267,15 @@ public sealed class PresentationContingencyStore(
         var blockers = string.Join("", p.Preflight.NonCodeBlockers.Select(x => $"<li><strong>{H(x.Id)}</strong> — {H(x.Description)} ({H(x.Severity)})</li>"));
         var checks = string.Join("", p.Preflight.Checks.Select(x => $"<li>{(x.Passed ? "✓" : "!")} <strong>{H(x.Name)}</strong> — {H(x.Detail)}</li>"));
         var blocks = string.Join("", p.EvidencePack.Payload.Blocks.Select(x => $"<tr><td>{x.Block:00}</td><td>{H(x.Name)}</td><td>{(x.Passed ? "PASSOU" : "ATENÇÃO")}</td><td>{x.Score}%</td></tr>"));
-        return $"""
+        return $$"""
         <!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Jundiai HealthOS - Contingencia</title>
-        <style>body{{font-family:Arial,sans-serif;margin:32px;color:#172333}}h1{{margin-bottom:4px}}.code{{font:700 24px monospace;color:#17466f}}.ok{{color:#147245}}.hash{{font:12px monospace;word-break:break-all;background:#f4f6f8;padding:9px}}table{{border-collapse:collapse;width:100%}}td,th{{border:1px solid #ccd4dd;padding:7px;text-align:left}}section{{margin:28px 0}}small{{color:#657485}}@media print{{body{{margin:10mm}}}}</style></head><body>
-        <p>RCE 008/2026 · snapshot estatico de contingencia</p><h1>Jundiai HealthOS</h1><div class="code">{H(dossier.VerificationCode)}</div>
-        <p class="ok"><strong>Integridade do dossie: {(verification.IntegrityReady ? "APROVADA" : "ATENCAO")}</strong> · 14 blocos: {verification.PassedBlocks}/{verification.TotalBlocks}</p>
-        <section><h2>Hashes</h2><p>Dossie</p><div class="hash">{H(dossier.DossierSha256)}</div><p>Evidence Pack</p><div class="hash">{H(p.EvidencePack.PackageSha256)}</div><p>Release manifest</p><div class="hash">{H(p.Release.ManifestSha256)}</div></section>
-        <section><h2>Build</h2><p>Revision: <strong>{H(p.Build.SourceRevision ?? "nao-injetada")}</strong><br>Validation run: <strong>{H(p.Build.ValidationRunId ?? "nao-informado")}</strong><br>Repository: {H(p.Build.Repository)}</p></section>
-        <section><h2>14 blocos</h2><table><thead><tr><th>#</th><th>Bloco</th><th>Estado</th><th>Score</th></tr></thead><tbody>{blocks}</tbody></table></section>
-        <section><h2>Preflight</h2><ul>{checks}</ul></section><section><h2>Bloqueadores nao-codigo</h2><ul>{blockers}</ul></section>
+        <style>body{font-family:Arial,sans-serif;margin:32px;color:#172333}h1{margin-bottom:4px}.code{font:700 24px monospace;color:#17466f}.ok{color:#147245}.hash{font:12px monospace;word-break:break-all;background:#f4f6f8;padding:9px}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccd4dd;padding:7px;text-align:left}section{margin:28px 0}small{color:#657485}@media print{body{margin:10mm}}</style></head><body>
+        <p>RCE 008/2026 · snapshot estatico de contingencia</p><h1>Jundiai HealthOS</h1><div class="code">{{H(dossier.VerificationCode)}}</div>
+        <p class="ok"><strong>Integridade do dossie: {{(verification.IntegrityReady ? "APROVADA" : "ATENCAO")}}</strong> · 14 blocos: {{verification.PassedBlocks}}/{{verification.TotalBlocks}}</p>
+        <section><h2>Hashes</h2><p>Dossie</p><div class="hash">{{H(dossier.DossierSha256)}}</div><p>Evidence Pack</p><div class="hash">{{H(p.EvidencePack.PackageSha256)}}</div><p>Release manifest</p><div class="hash">{{H(p.Release.ManifestSha256)}}</div></section>
+        <section><h2>Build</h2><p>Revision: <strong>{{H(p.Build.SourceRevision ?? "nao-injetada")}}</strong><br>Validation run: <strong>{{H(p.Build.ValidationRunId ?? "nao-informado")}}</strong><br>Repository: {{H(p.Build.Repository)}}</p></section>
+        <section><h2>14 blocos</h2><table><thead><tr><th>#</th><th>Bloco</th><th>Estado</th><th>Score</th></tr></thead><tbody>{{blocks}}</tbody></table></section>
+        <section><h2>Preflight</h2><ul>{{checks}}</ul></section><section><h2>Bloqueadores nao-codigo</h2><ul>{{blockers}}</ul></section>
         <section><small>Arquivo autocontido para contingencia de apresentacao. Nao substitui homologacao, habilitacao, release assinada, SBOM, ICP-Brasil, carimbo oficial ou autorizacao de producao.</small></section>
         </body></html>
         """;
