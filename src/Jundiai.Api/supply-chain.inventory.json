@@ -1,0 +1,56 @@
+{
+  "inventoryType": "jundiai-healthos-poc-dependency-inventory",
+  "version": "2026.08.26-v1",
+  "formalSbom": false,
+  "scope": "declared application, test and container dependencies used by the public Jundiai HealthOS POC repository",
+  "dotnet": {
+    "targetFramework": "net8.0",
+    "packages": [
+      {
+        "name": "Microsoft.EntityFrameworkCore",
+        "version": "8.0.4",
+        "kind": "direct"
+      },
+      {
+        "name": "Npgsql.EntityFrameworkCore.PostgreSQL",
+        "version": "8.0.4",
+        "kind": "direct"
+      }
+    ]
+  },
+  "npm": {
+    "packageName": "jundiai-healthos-poc-e2e",
+    "devDependencies": [
+      {
+        "name": "@playwright/test",
+        "version": "1.62.1",
+        "kind": "direct-dev"
+      }
+    ],
+    "lockfile": "absent",
+    "lockfileNote": "package-lock.json ainda nao esta versionado; dependencias transitivas npm nao estao congeladas por este inventario POC."
+  },
+  "containers": [
+    {
+      "source": "Dockerfile",
+      "image": "mcr.microsoft.com/dotnet/sdk:8.0",
+      "purpose": "build"
+    },
+    {
+      "source": "Dockerfile",
+      "image": "mcr.microsoft.com/dotnet/aspnet:8.0",
+      "purpose": "runtime"
+    },
+    {
+      "source": "compose.yaml",
+      "image": "postgres:16-alpine",
+      "purpose": "database"
+    }
+  ],
+  "limitations": [
+    "Este arquivo e um inventario POC verificavel, nao CycloneDX/SPDX e nao uma SBOM formal.",
+    "Nao enumera todas as dependencias transitivas de NuGet/npm nem CVEs.",
+    "Tags de imagens de container ainda nao estao fixadas por digest imutavel.",
+    "Uma release produtiva exige lockfiles, SBOM formal, vulnerability policy, digest/attestation e processo de promocao/rollback."
+  ]
+}
