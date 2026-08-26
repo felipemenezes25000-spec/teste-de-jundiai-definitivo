@@ -49,6 +49,9 @@ public static class AuthSecurityEndpoints
             mfa = "TOTP-like demo challenge with fail-closed verification",
             lockout = new { attempts = DemoIdentityStore.MaxFailedAttempts, minutes = DemoIdentityStore.LockoutMinutes },
             rbac = "explicit-role-permission/default-deny",
+            anonymousProtectedApi = "401-fail-closed",
+            demoRoleHeaderEnabled = DemoAccessControlMiddleware.DemoRoleHeaderEnabled,
+            demoRoleHeaderPolicy = "disabled-by-default; enable only with JUNDIAI_ALLOW_DEMO_ROLE_HEADER=true",
             seededUsers = store.DemoUsers().Count,
             productionNote = "POC identity store only; production must use persistent identity provider, secret-backed MFA and audited token lifecycle."
         }));
