@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -85,7 +84,18 @@ public sealed class EvidenceLedgerStore
     }
 
     private static string Canonical(long sequence, string actor, string action, string resource, string? requirementId, string? detail, string evidenceType, DateTimeOffset occurredAt, string previousHash) =>
-        string.Join('|', sequence, Clean(actor), Clean(action), Clean(resource), Clean(requirementId), Clean(detail), Clean(evidenceType), occurredAt.ToUniversalTime().ToString("O"), previousHash);
+        string.Join('|', new[]
+        {
+            sequence.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            Clean(actor),
+            Clean(action),
+            Clean(resource),
+            Clean(requirementId),
+            Clean(detail),
+            Clean(evidenceType),
+            occurredAt.ToUniversalTime().ToString("O"),
+            previousHash
+        });
 
     private static string Clean(string? value) => (value ?? string.Empty).Replace("|", "/").Replace("\r", " ").Replace("\n", " ").Trim();
     private static string Sha256(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
