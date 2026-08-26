@@ -1,6 +1,8 @@
 name: ci
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -23,6 +25,14 @@ jobs:
           node --check src/Jundiai.Api/wwwroot/sw.js
           node --check src/Jundiai.Api/wwwroot/poc.js
           node --check src/Jundiai.Api/wwwroot/caretrace.js
+      - name: Validate smoke script
+        run: bash -n scripts/smoke.sh
+      - name: Public repository secret hygiene
+        run: |
+          if grep -R -n -E 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|AKIA[0-9A-Z]{16}' --exclude-dir=.git .; then
+            echo 'Potential private key or AWS access key material found.'
+            exit 1
+          fi
       - run: dotnet restore src/Jundiai.Api/Jundiai.Api.csproj
       - run: dotnet build src/Jundiai.Api/Jundiai.Api.csproj -c Release --no-restore
       - name: Smoke test POC
