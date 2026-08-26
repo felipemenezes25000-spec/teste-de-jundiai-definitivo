@@ -53,14 +53,14 @@ public sealed class PresentationPreparationStore(
 
     private static readonly string[] CriticalPages =
     [
-        "login.html", "poc.html", "verification.html", "evidence-pack.html", "command-center.html", "caretrace.html", "governance.html",
+        "login.html", "poc.html", "verification.html", "evidence-pack.html", "dossier.html", "command-center.html", "caretrace.html", "governance.html",
         "registration.html", "workforce.html", "referrals.html", "clinical-ops.html", "agenda.html", "telemedicine.html", "immunization-v2.html",
         "pharmacy-care.html", "diagnostics.html", "dental-v2.html", "billing-v2.html", "operations.html", "citizen.html", "esus.html", "acs.html"
     ];
 
     private static readonly string[] CriticalAssets =
     [
-        "poc.css", "poc.js", "verification.js", "evidence-pack.js", "command-center.js", "caretrace.js", "governance.js", "governance-persistence.js",
+        "poc.css", "poc.js", "verification.js", "evidence-pack.js", "dossier.js", "command-center.js", "caretrace.js", "governance.js", "governance-persistence.js",
         "governance-privacy.js", "sw.js"
     ];
 
@@ -75,7 +75,7 @@ public sealed class PresentationPreparationStore(
         assets = CriticalAssets.Select(CheckWebAsset).ToArray(),
         presentationOrder = new[]
         {
-            "login + MFA", "Modo POC", "cenário ouro", "runner 14/14", "jornada assistencial", "governança", "Evidence Pack", "integrity verify", "export JSON"
+            "login + MFA", "Modo POC", "cenário ouro", "runner 14/14", "jornada assistencial", "governança", "Evidence Pack", "integrity verify", "Dossiê da Banca", "export JSON / impressão-PDF"
         },
         rule = "Preflight de apresentação verifica demonstrabilidade; não promove Production Gates."
     };
@@ -137,6 +137,7 @@ public sealed class PresentationPreparationStore(
                 "Apresentação pronta não significa produção pronta.",
                 "HAB-AT-29 continua dependência documental crítica.",
                 "Integrações externas continuam condicionadas a credencial/homologação oficial.",
+                "O Dossiê da Banca é uma superfície demonstrativa verificável; assinatura de release/SBOM/attestation produtivos continuam Production Gates.",
                 persistenceRuntime.Configured
                     ? "PostgreSQL está configurado nesta instância; Production Gates de backup/PITR/DR continuam separados."
                     : "Esta instância usa fallback em memória; a fundação PostgreSQL/recovery/messaging é validada separadamente no CI."
