@@ -113,6 +113,31 @@ function renderScenario(scenario) {
   q('#golden-status').innerHTML = `<h3>Cenário ouro preparado</h3><div class="kpi">${scenario.artifacts.length}</div><p>${esc(scenario.citizenName)} · cadeia de evidência ${scenario.evidenceChainValid ? 'íntegra' : 'com divergência'}.</p>${rows(scenario.artifacts, x => `<div class="row"><span>${esc(x.domain)}</span><strong>${esc(x.status)}</strong></div>`)}`;
 }
 
+function renderPresentation(result) {
+  const card = q('#presentation-status');
+  if (!card || !result) return;
+  const passed = result.checks?.filter(x => x.passed).length || 0;
+  const total = result.checks?.length || 0;
+  card.innerHTML = `<h3>${result.ready ? 'READY · banca preparada' : 'ATENÇÃO · preflight incompleto'}</h3><div class="kpi">${passed}/${total}</div><p>Runner ${result.passedBlocks}/${result.totalBlocks} · score ${result.overallScore} · páginas ${result.pages.filter(x=>x.exists).length}/${result.pages.length}.</p>${rows(result.checks, x => `<div class="row"><span>${esc(x.name)}</span><strong>${x.passed ? 'OK' : 'ATENÇÃO'}</strong></div>`)}<div class="evidence">Evidence Pack SHA-256 · ${esc(result.evidencePackSha256)}</div><p><small>${esc(result.persistenceMode)} · não promove Production Gates</small></p>`;
+}
+
+q('#prepare-presentation').addEventListener('click', async () => {
+  const button = q('#prepare-presentation');
+  button.disabled = true;
+  button.textContent = 'Executando preflight…';
+  try {
+    const result = await api('/api/poc/presentation/prepare', { method: 'POST', body: JSON.stringify({ actor: 'console.poc' }) });
+    renderPresentation(result);
+    await load();
+  } catch (error) {
+    q('#error').hidden = false;
+    q('#error').textContent = `Preparação da banca: ${error.message}`;
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Preparar banca completa';
+  }
+});
+
 q('#prepare-golden').addEventListener('click', async () => {
   const button = q('#prepare-golden');
   button.disabled = true;
@@ -126,7 +151,7 @@ q('#prepare-golden').addEventListener('click', async () => {
     q('#error').textContent = `Cenário ouro: ${error.message}`;
   } finally {
     button.disabled = false;
-    button.textContent = 'Preparar jornada completa';
+    button.textContent = 'Somente cenário ouro';
   }
 });
 
@@ -138,4 +163,6 @@ q('#logout').addEventListener('click', async () => {
   localStorage.removeItem('jundiai.user');
   location.href = '/login.html';
 });
+
 load();
+api('/api/poc/presentation/latest').then(renderPresentation).catch(() => {});
