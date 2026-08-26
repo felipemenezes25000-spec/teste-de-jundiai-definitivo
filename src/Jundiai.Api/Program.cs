@@ -14,6 +14,8 @@ builder.Services.AddSingleton<DemoStore>();
 builder.Services.AddSingleton<MunicipalOperationsStore>();
 builder.Services.AddSingleton<DemoIdentityStore>();
 builder.Services.AddSingleton<CitizenMasterDataStore>();
+builder.Services.AddSingleton<ProfessionalRegistryStore>();
+builder.Services.AddSingleton<ReferralNetworkStore>();
 builder.Services.AddSingleton<SchedulingStore>();
 builder.Services.AddSingleton<TelemedicineStore>();
 builder.Services.AddSingleton<SusBillingEngineStore>();
@@ -76,6 +78,8 @@ app.MapGet("/api/citizens/{id:guid}", (Guid id, DemoStore store) =>
 
 app.MapAuthSecurityEndpoints();
 app.MapCitizenMasterDataEndpoints();
+app.MapProfessionalRegistryEndpoints();
+app.MapReferralNetworkEndpoints();
 app.MapClinicalEndpoints();
 app.MapClinicalDocumentEndpoints();
 app.MapClinicalOrderEndpoints();
