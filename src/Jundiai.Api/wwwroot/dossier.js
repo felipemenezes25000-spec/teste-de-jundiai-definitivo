@@ -43,6 +43,7 @@ function render(artifact) {
   const preflight = payload.preflight;
   const pack = payload.evidencePack;
   const build = payload.build;
+  const release = payload.release;
   const blocks = pack.payload.blocks || [];
   const blockers = preflight.nonCodeBlockers || pack.payload.nonCodeBlockers || [];
 
@@ -55,25 +56,28 @@ function render(artifact) {
     ['Blocos', `${preflight.passedBlocks}/${preflight.totalBlocks}`, 'runner funcional'],
     ['Checks', `${preflight.checks.filter(x => x.passed).length}/${preflight.checks.length}`, 'preflight da banca'],
     ['Score', `${preflight.overallScore}%`, 'readiness POC'],
-    ['Integrações', pack.payload.integrations.length, 'governadas no Evidence Pack'],
+    ['Runtime', `${release.payload.files.filter(x => x.exists).length}/${release.payload.files.length}`, 'artefatos hasheados'],
+    ['Libraries', release.payload.runtimeLibraries.length, 'extraídas do .deps.json'],
     ['Blockers', blockers.length, 'não resolvidos por código'],
-    ['Eventos', pack.payload.evidenceEvents.length, 'janela no Evidence Ledger'],
     ['Gerado', new Date(payload.generatedAt).toLocaleString('pt-BR'), 'captura do dossiê'],
     ['Build', build.sourceRevision ? build.sourceRevision.slice(0, 12) : 'não injetado', build.sourceRevisionInjected ? 'revisão do processo' : 'defina JUNDIAI_BUILD_SHA']
   ].map(x => metric(...x)).join('');
 
-  q('#build-proof').innerHTML = `<h3>Build</h3><div class="rows">
+  q('#build-proof').innerHTML = `<h3>Build + runtime</h3><div class="rows">
     <div class="row"><span>repositório</span><strong>${esc(build.repository)}</strong></div>
     <div class="row"><span>revisão</span><strong>${esc(build.sourceRevision || 'não injetada')}</strong></div>
     <div class="row"><span>run validação</span><strong>${esc(build.validationRunId || 'não informado')}</strong></div>
     <div class="row"><span>runtime</span><strong>${esc(build.runtime)}</strong></div>
     <div class="row"><span>RID</span><strong>${esc(build.runtimeIdentifier)}</strong></div>
-    <div class="row"><span>ambiente</span><strong>${esc(build.environment)}</strong></div>
+    <div class="row"><span>artefatos</span><strong>${release.payload.files.filter(x => x.exists).length}/${release.payload.files.length}</strong></div>
+    <div class="row"><span>libraries runtime</span><strong>${release.payload.runtimeLibraries.length}</strong></div>
   </div><p><small>${esc(build.note)}</small></p>`;
 
   q('#hash-proof').innerHTML = `<h3>Hashes</h3>
     <p><strong>Dossiê</strong></p><div class="hash">${esc(artifact.dossierSha256)}</div>
     <p><strong>Evidence Pack</strong></p><div class="hash">${esc(pack.packageSha256)}</div>
+    <p><strong>Manifesto runtime</strong></p><div class="hash">${esc(release.manifestSha256)}</div>
+    <p><strong>Libraries runtime</strong></p><div class="hash">${esc(release.payload.runtimeLibrariesSha256)}</div>
     <p><small>${esc(artifact.hashAlgorithm)} · ${esc(artifact.canonicalization)}</small></p>`;
 
   q('#blocks').innerHTML = blocks.map(block => `<article class="block-line">
@@ -123,6 +127,8 @@ async function verify() {
         <div class="row"><span>código de verificação</span><strong>${result.verificationCodeValid ? 'OK' : 'FALHA'}</strong></div>
         <div class="row"><span>Evidence Pack</span><strong>${result.evidencePackHashValid ? 'OK' : 'FALHA'}</strong></div>
         <div class="row"><span>Evidence Ledger</span><strong>${result.evidenceLedgerValid ? 'OK' : 'FALHA'}</strong></div>
+        <div class="row"><span>manifesto runtime</span><strong>${result.releaseManifestHashValid ? 'OK' : 'FALHA'}</strong></div>
+        <div class="row"><span>bytes runtime</span><strong>${result.runtimeFilesValid ? 'OK' : 'FALHA'}</strong></div>
         <div class="row"><span>preflight</span><strong>${result.preflightReady ? 'READY' : 'ATENÇÃO'}</strong></div>
         <div class="row"><span>build vinculado</span><strong>${result.buildRevisionBound ? esc(result.sourceRevision?.slice(0, 12)) : 'não injetado'}</strong></div>
       </div><p><small>${esc(result.note)}</small></p>
