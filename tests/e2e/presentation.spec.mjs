@@ -40,6 +40,7 @@ test('login + MFA + Preparar Banca deixam o cockpit READY', async ({ page }) => 
   await expect(page).toHaveURL(/\/poc\.html$/);
   await expect(page.getByRole('heading', { name: /Uma apresentação guiada pelos 14 blocos/i })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Evidence Pack', exact: true }).first()).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Dossiê da Banca', exact: true }).first()).toBeVisible();
 
   await page.locator('#prepare-presentation').click();
   await expect(page.locator('#presentation-status')).toContainText('READY · banca preparada');
@@ -77,6 +78,41 @@ test('Evidence Pack é gerado, verificado e exportado pelo navegador', async ({ 
   expect(exported.payload.nonCodeBlockers.some(item => item.id === 'HAB-AT-29')).toBe(true);
 });
 
+test('Dossiê da Banca congela READY, build e Evidence Pack em artefato verificável', async ({ page }) => {
+  await authenticate(page);
+  await page.goto('/dossier.html', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('heading', { name: /Dossiê verificável do estado demonstrado/i })).toBeVisible();
+
+  await page.locator('#generate').click();
+  await expect(page.locator('#dossier-status')).toContainText('READY');
+  await expect(page.locator('#dossier-status')).toContainText('14/14');
+  await expect(page.locator('#dossier-status')).toContainText('8/8');
+  await expect(page.locator('#verification-code')).toHaveText(/^JUN-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}$/);
+  await expect(page.locator('#blocks .block-line')).toHaveCount(14);
+  await expect(page.locator('#checks .module')).toHaveCount(8);
+  await expect(page.locator('#blockers')).toContainText('HAB-AT-29');
+  await expect(page.locator('#hash-proof')).toContainText('Evidence Pack');
+  await expect(page.locator('#verification-result')).toContainText('INTEGRIDADE APROVADA');
+
+  const code = await page.locator('#verification-code').textContent();
+  const downloadPromise = page.waitForEvent('download');
+  await page.locator('#export').click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/^jundiai-rce-008-2026-dossie-JUN[A-F0-9]{12}\.json$/);
+  const stream = await download.createReadStream();
+  const exported = JSON.parse((await streamToBuffer(stream)).toString('utf8'));
+  expect(exported.verificationCode).toBe(code);
+  expect(exported.dossierSha256).toMatch(/^[a-f0-9]{64}$/);
+  expect(exported.payload.preflight.ready).toBe(true);
+  expect(exported.payload.preflight.passedBlocks).toBe(14);
+  expect(exported.payload.preflight.totalBlocks).toBe(14);
+  expect(exported.payload.evidencePack.payload.blocks).toHaveLength(14);
+  expect(exported.payload.build.service).toBe('Jundiai HealthOS');
+  expect(exported.payload.build.contract).toBe('RCE 008/2026');
+  expect(exported.payload.preflight.nonCodeBlockers.some(item => item.id === 'HAB-AT-29')).toBe(true);
+  if (process.env.GITHUB_SHA) expect(exported.payload.build.sourceRevision).toBe(process.env.GITHUB_SHA);
+});
+
 test('superfícies críticas da apresentação renderizam sem erro fatal de browser', async ({ page }) => {
   await authenticate(page);
   const problems = browserProblems(page);
@@ -84,6 +120,7 @@ test('superfícies críticas da apresentação renderizam sem erro fatal de brow
     '/poc.html',
     '/verification.html',
     '/evidence-pack.html',
+    '/dossier.html',
     '/command-center.html',
     '/caretrace.html',
     '/governance.html',
