@@ -16,6 +16,7 @@
     <a class="button ghost" href="/">Operação</a>
     <a class="button ghost" href="/operations.html">Backoffice</a>
     <a class="button ghost" href="/citizen.html">Cidadão</a>
+    <a class="button ghost" href="/caretrace.html">CareTrace</a>
     <button class="ghost" id="refresh">Atualizar</button>
     <button id="logout">Sair</button>
   </div>
@@ -36,6 +37,16 @@
   <section class="summary-grid" id="summary"></section>
 
   <div class="section-head">
+    <div><h2>Cenário ouro</h2><p>Prepara uma jornada integrada e idempotente antes da demonstração.</p></div>
+    <button id="prepare-golden">Preparar jornada completa</button>
+  </div>
+  <section class="module-grid">
+    <article class="module" id="golden-status"><h3>Pronto para preparar</h3><p>O cenário conecta regulação → agenda → teleconsulta → diagnóstico → documento → IA revisada → evidência.</p></article>
+    <article class="module" id="integration-status"><h3>Integrações</h3><p>Carregando registro de fronteiras externas…</p></article>
+    <article class="module" id="migration-status"><h3>Migração</h3><p>Carregando workspace de legado…</p></article>
+  </section>
+
+  <div class="section-head">
     <div><h2>14 blocos da demonstração</h2><p>Cada cartão tem estado, pontuação e evidência funcional.</p></div>
   </div>
   <section class="blocks" id="blocks"></section>
@@ -50,6 +61,9 @@
     <article class="module" id="inventory"></article>
     <article class="module" id="telemedicine"></article>
     <article class="module" id="documents"></article>
+    <article class="module" id="ai-governance"></article>
+    <article class="module" id="operations-readiness"></article>
+    <article class="module" id="analytics"></article>
     <article class="module" id="evidence"></article>
     <article class="module" id="dashboard-module"></article>
     <article class="module">
@@ -57,6 +71,7 @@
       <p>Abra a jornada certa sem procurar menu durante a banca.</p>
       <div class="rows">
         <div class="row"><span>Patient 360 / regulação / faturamento</span><strong><a href="/">Centro municipal</a></strong></div>
+        <div class="row"><span>CareTrace longitudinal</span><strong><a href="/caretrace.html">Jornada integrada</a></strong></div>
         <div class="row"><span>Recepção / vacina / estoque / prontuário físico</span><strong><a href="/operations.html">Backoffice</a></strong></div>
         <div class="row"><span>APS / e-SUS demonstrativo</span><strong><a href="/esus.html">Território</a></strong></div>
         <div class="row"><span>ACS offline</span><strong><a href="/acs.html">App ACS</a></strong></div>
