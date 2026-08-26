@@ -8,7 +8,7 @@ const persistenceApi = async (url, options={}) => {
 
 const persistenceEscape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-function renderPersistenceState(p,recovery){
+function renderPersistenceState(p,recovery,messaging){
   const k=document.querySelector('#persistence-kpis');
   const list=document.querySelector('#persistence-list');
   const basic=document.querySelector('#checkpoint');
@@ -17,14 +17,16 @@ function renderPersistenceState(p,recovery){
   if(!k||!list||!basic)return;
   k.innerHTML=[
     ['Provider',p.provider||'PostgreSQL'],
-    ['Configurado',p.configured?'sim':'não'],
-    ['Conexão',p.canConnect?'OK':'—'],
-    ['Checkpoints',recovery?.checkpoints??0]
+    ['Checkpoints',recovery?.checkpoints??0],
+    ['Inbox',messaging?.inboxReceipts??0],
+    ['Outbox pendente',messaging?.pendingOutbox??0]
   ].map(([label,value])=>`<article><small>${label}</small><strong style="font-size:16px">${persistenceEscape(value)}</strong></article>`).join('');
   const migrations=Array.isArray(p.pendingMigrations)?p.pendingMigrations:[];
   const recoveryCapabilities=Array.isArray(recovery?.capabilities)?recovery.capabilities:[];
+  const messagingCapabilities=Array.isArray(messaging?.capabilities)?messaging.capabilities:[];
   list.innerHTML=`<article class="item"><div class="item-head"><div><h3>Fundação PostgreSQL</h3><p>${persistenceEscape(p.note||'DbContext, migration, tenant scope, checkpoint, outbox e idempotência.')}</p></div><span class="chip">${p.configured?'configurado':'fallback POC'}</span></div><div class="mono">migrations pendentes: ${migrations.length?migrations.map(persistenceEscape).join(', '):'nenhuma/indisponível'}</div></article>
-  <article class="item"><div class="item-head"><div><h3>Recovery control plane</h3><p>Checkpoint completo por domínio, manifesto SHA-256, verificação de envelopes e preview de restauração sem mutação.</p></div><span class="chip">${recovery?.recoveryDrillAvailable?'drill disponível':'sem checkpoint'}</span></div><div class="mono">${persistenceEscape(recoveryCapabilities.join(' · ')||'Configure PostgreSQL para habilitar.')}</div></article>`;
+  <article class="item"><div class="item-head"><div><h3>Recovery control plane</h3><p>Checkpoint completo por domínio, manifesto SHA-256, verificação de envelopes e preview de restauração sem mutação.</p></div><span class="chip">${recovery?.recoveryDrillAvailable?'drill disponível':'sem checkpoint'}</span></div><div class="mono">${persistenceEscape(recoveryCapabilities.join(' · ')||'Configure PostgreSQL para habilitar.')}</div></article>
+  <article class="item"><div class="item-head"><div><h3>Mensageria durável</h3><p>Inbox idempotente, outbox com retry/dead-letter e requeue manual justificado.</p></div><span class="chip">dead-letter ${persistenceEscape(messaging?.deadLetter??0)}</span></div><div class="mono">${persistenceEscape(messagingCapabilities.join(' · ')||'Configure PostgreSQL para habilitar.')}</div>${messaging?.productionGap?`<p>${persistenceEscape(messaging.productionGap)}</p>`:''}</article>`;
   basic.disabled=!p.configured;
   if(full) full.disabled=!p.configured;
   if(drill) drill.disabled=!p.configured||!recovery?.recoveryDrillAvailable;
@@ -33,11 +35,12 @@ function renderPersistenceState(p,recovery){
 
 async function refreshPersistence(){
   try{
-    const [p,recovery]=await Promise.all([
+    const [p,recovery,messaging]=await Promise.all([
       persistenceApi('/api/audit/persistence/readiness'),
-      persistenceApi('/api/audit/persistence/recovery/readiness').catch(()=>null)
+      persistenceApi('/api/audit/persistence/recovery/readiness').catch(()=>null),
+      persistenceApi('/api/audit/persistence/messaging/readiness').catch(()=>null)
     ]);
-    renderPersistenceState(p,recovery);
+    renderPersistenceState(p,recovery,messaging);
   }catch(e){const list=document.querySelector('#persistence-list');if(list)list.innerHTML=`<article class="item"><p>${persistenceEscape(e.message)}</p></article>`;}
 }
 
@@ -67,6 +70,7 @@ document.querySelector('#recovery-drill')?.addEventListener('click',async()=>{
     const result=await persistenceApi('/api/audit/persistence/recovery-drill',{method:'POST',body:JSON.stringify({checkpointId:null,actor:'console.governanca'})});
     const status=result.integrityValid&&result.restorePreviewValid&&result.criticalKindsPresent===result.criticalKindsExpected?'APROVADO':'ATENÇÃO';
     prependPersistenceCard(`Recovery drill · ${status}`,`<p>Integridade: ${result.integrityValid?'OK':'falha'} · restore preview: ${result.restorePreviewValid?'OK':'falha'} · críticos ${result.criticalKindsPresent}/${result.criticalKindsExpected} · RPO observado ${result.rpoAgeSeconds}s</p><div class="mono">checkpoint ${persistenceEscape(result.checkpointId)}${result.failures?.length?`<br/>falhas: ${result.failures.map(persistenceEscape).join(', ')}`:''}</div><p>${persistenceEscape(result.disclaimer)}</p>`);
+    await refreshPersistence();
   }catch(e){prependPersistenceCard('Falha no recovery drill',`<p>${persistenceEscape(e.message)}</p>`);}
 });
 
