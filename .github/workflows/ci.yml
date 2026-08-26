@@ -21,6 +21,8 @@ jobs:
         run: |
           node --check src/Jundiai.Api/wwwroot/app.js
           node --check src/Jundiai.Api/wwwroot/sw.js
+          node --check src/Jundiai.Api/wwwroot/poc.js
+          node --check src/Jundiai.Api/wwwroot/caretrace.js
       - run: dotnet restore src/Jundiai.Api/Jundiai.Api.csproj
       - run: dotnet build src/Jundiai.Api/Jundiai.Api.csproj -c Release --no-restore
       - name: Smoke test POC
