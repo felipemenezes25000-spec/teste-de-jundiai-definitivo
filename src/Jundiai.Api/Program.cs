@@ -27,11 +27,14 @@ builder.Services.AddSingleton<LegacyMigrationStore>();
 builder.Services.AddSingleton<IntegrationRegistryStore>();
 builder.Services.AddSingleton<OperationalReadinessStore>();
 builder.Services.AddSingleton<PocScenarioStore>();
+builder.Services.AddSingleton<PrivacyGovernanceStore>();
 builder.Services.AddJundiaiPersistence(builder.Configuration);
+builder.Services.AddJundiaiOperationalTelemetry();
 
 var app = builder.Build();
 await app.InitializeJundiaiPersistenceAsync();
 
+app.UseJundiaiOperationalTelemetry();
 app.UseJundiaiProblemDetails();
 app.UseDefaultFiles();
 app.UseStaticFiles();
@@ -59,6 +62,7 @@ app.MapGet("/api/health", (PersistenceRuntimeState persistence) => Results.Ok(ne
     persistence = persistence.Mode,
     time = DateTimeOffset.UtcNow
 }));
+app.MapJundiaiOperationalHealthEndpoints();
 
 app.MapGet("/api/dashboard", (DemoStore store) => Results.Ok(store.Dashboard()));
 app.MapGet("/api/citizens", (DemoStore store) => Results.Ok(store.Citizens()));
@@ -88,6 +92,7 @@ app.MapPopulationAnalyticsEndpoints();
 app.MapPocScenarioEndpoints();
 app.MapPlatformReadinessEndpoints();
 app.MapJundiaiPersistenceEndpoints();
+app.MapPrivacyGovernanceEndpoints();
 
 app.MapGet("/api/regulation", (DemoStore store) => Results.Ok(store.Regulation()));
 app.MapPost("/api/regulation", (CreateRegulationRequest request, DemoStore store) =>
