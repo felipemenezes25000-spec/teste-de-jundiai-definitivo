@@ -24,7 +24,7 @@
 <body>
 <header class="top">
   <div class="brand"><div class="brand-mark">D</div><div><strong>Dossiê da Banca</strong><small>RCE 008/2026 · evidência verificável</small></div></div>
-  <div class="top-actions"><a class="button ghost" href="/poc.html">← Modo POC</a><a class="button ghost" href="/evidence-pack.html">Evidence Pack</a><a class="button ghost" href="/governance.html">Governança</a></div>
+  <div class="top-actions"><a class="button ghost" href="/poc.html">← Modo POC</a><a class="button ghost" href="/evidence-pack.html">Evidence Pack</a><a class="button ghost" href="/contingency.html">Kit de Contingência</a><a class="button ghost" href="/governance.html">Governança</a></div>
 </header>
 
 <main class="shell">
@@ -32,7 +32,7 @@
     <div>
       <p class="eyebrow">Comprovante técnico da apresentação</p>
       <h1>Dossiê verificável do estado demonstrado</h1>
-      <p>Congela o preflight READY, o Evidence Pack, a identidade do build e os blockers conhecidos em um artefato com SHA-256 canônico e código curto de verificação.</p>
+      <p>Congela o preflight READY, Evidence Pack, identidade do build e manifesto SHA-256 dos artefatos runtime carregados pela instância. É prova de bytes demonstrados — não uma release assinada ou SBOM formal.</p>
       <div class="verify-code" id="verification-code">—</div>
       <p class="print-only">Verificação local: informe o código acima em <strong>/dossier.html</strong> na mesma instância da POC.</p>
     </div>
@@ -42,14 +42,14 @@
   <div id="error" class="risk" hidden></div>
   <div class="section-head">
     <div><h2>Ações</h2><p>Gere no fim da demonstração para capturar o estado efetivamente apresentado.</p></div>
-    <div class="toolbar"><button id="generate">Gerar dossiê</button><button class="ghost" id="verify">Verificar</button><button class="ghost" id="export">Exportar JSON</button><button class="ghost" id="print">Imprimir / PDF</button></div>
+    <div class="toolbar"><button id="generate">Gerar dossiê</button><button class="ghost" id="verify">Verificar</button><button class="ghost" id="export">Exportar JSON</button><button class="ghost" id="print">Imprimir / PDF</button><a class="button ghost" href="/contingency.html">Gerar kit offline</a></div>
   </div>
 
   <section class="dossier-grid" id="summary"></section>
 
-  <div class="section-head"><div><h2>Proveniência e integridade</h2><p>Duas cadeias: build da instância e artefatos de evidência.</p></div></div>
+  <div class="section-head"><div><h2>Proveniência e integridade</h2><p>Build, artefatos runtime e cadeias de evidência precisam conferir juntos.</p></div></div>
   <section class="proof">
-    <article id="build-proof"><h3>Build</h3><p>Gere um dossiê para ler a identidade da instância.</p></article>
+    <article id="build-proof"><h3>Build + runtime</h3><p>Gere um dossiê para ler a identidade da instância.</p></article>
     <article id="hash-proof"><h3>Hashes</h3><p>Gere um dossiê para calcular as provas.</p></article>
   </section>
   <section id="verification-result" style="margin-top:12px"></section>
@@ -57,13 +57,13 @@
   <div class="section-head"><div><h2>14 blocos</h2><p>Resumo do mesmo Evidence Pack incluído integralmente no JSON exportado.</p></div></div>
   <section class="block-table" id="blocks"></section>
 
-  <div class="section-head"><div><h2>8 checks do preflight</h2><p>READY só aparece quando todos passam.</p></div></div>
+  <div class="section-head"><div><h2>8 checks do preflight</h2><p>READY só aparece quando todos passam; o manifesto runtime é validado adicionalmente no próprio Dossiê.</p></div></div>
   <section class="module-grid" id="checks"></section>
 
   <div class="section-head"><div><h2>Bloqueadores não resolvidos por código</h2><p>Transparência é parte da evidência.</p></div></div>
   <section id="blockers"></section>
 
-  <section class="footer-note" id="disclaimers">Este dossiê é demonstrativo e não substitui edital, atestados, homologações, assinatura ICP-Brasil, carimbo oficial ou aceite de produção.</section>
+  <section class="footer-note" id="disclaimers">Este dossiê é demonstrativo e não substitui edital, atestados, homologações, assinatura ICP-Brasil, carimbo oficial, SBOM, attestation ou aceite de produção.</section>
 </main>
 <script src="/dossier.js"></script>
 </body>
