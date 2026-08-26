@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Jundiaí HealthOS · CareTrace</title>
+  <link rel="stylesheet" href="/poc.css" />
+  <style>
+    .trace-shell{display:grid;grid-template-columns:320px 1fr;gap:18px}.patient-card,.timeline-card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:20px}.patient-card{position:sticky;top:90px;height:max-content}.patient-card h2{margin:4px 0}.patient-card p{color:var(--muted);font-size:13px}.gap{border-left:4px solid #c34c3e;background:#fff7f5;padding:12px;border-radius:10px;margin:8px 0}.gap.high{border-left-color:#d49300}.gap strong{display:block;font-size:12px}.gap span{font-size:12px;color:var(--muted)}.trace{position:relative;margin-top:10px}.trace:before{content:"";position:absolute;left:17px;top:8px;bottom:8px;width:2px;background:#dce5ef}.event{position:relative;display:grid;grid-template-columns:36px 1fr;gap:12px;padding:9px 0}.dot{width:12px;height:12px;border-radius:50%;background:#1c5b91;margin:7px 0 0 12px;z-index:1;box-shadow:0 0 0 5px #eef5fb}.event-body{padding:0 0 12px;border-bottom:1px solid #edf1f5}.event-body h4{margin:0 0 3px}.event-body small{color:var(--muted)}.meta{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.meta span{font-size:10px;padding:4px 6px;border-radius:7px;background:#f4f7fa;color:#52677e}.type{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#57799c;font-weight:850}.empty{color:var(--muted)}select{width:100%;padding:11px;border:1px solid var(--line);border-radius:11px;background:#fff}.back{color:#1a558b;text-decoration:none;font-weight:800}@media(max-width:850px){.trace-shell{grid-template-columns:1fr}.patient-card{position:static}}
+  </style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><div class="brand-mark">J</div><div><strong>CareTrace</strong><small>continuidade assistencial e evidência longitudinal</small></div></div>
+  <div class="top-actions"><a class="button ghost" href="/poc.html">← Modo POC</a><a class="button ghost" href="/">Patient 360</a></div>
+</header>
+<main class="shell">
+  <section class="hero">
+    <div><p class="eyebrow">HealthOS · jornada conectada</p><h1>Um cidadão, uma trilha de cuidado</h1><p>Regulação, território, ACS, vacina, farmácia, diagnóstico, telemedicina, documentos, odontologia e produção SUS são reunidos sem apagar a proveniência de cada domínio.</p></div>
+    <div class="score" id="trace-score" style="--score:100%"><div><strong id="node-count">—</strong><span>eventos/nós</span></div></div>
+  </section>
+  <div id="error" class="risk" hidden></div>
+  <div class="section-head"><div><h2>Jornada longitudinal</h2><p>Selecione o cidadão demonstrativo.</p></div></div>
+  <section class="trace-shell">
+    <aside class="patient-card">
+      <label for="citizen">Cidadão</label>
+      <select id="citizen"></select>
+      <div id="patient"></div>
+      <h3>Lacunas de continuidade</h3>
+      <div id="gaps"></div>
+    </aside>
+    <article class="timeline-card">
+      <div class="section-head" style="margin-top:0"><div><h2 id="title">Linha do tempo</h2><p id="subtitle">Carregando…</p></div></div>
+      <div class="trace" id="trace"></div>
+    </article>
+  </section>
+  <div class="footer-note">CareTrace é uma visão derivada: cada evento continua pertencendo ao módulo de origem. Em produção, os identificadores e a proveniência devem ser persistentes, versionados e auditáveis.</div>
+</main>
+<script src="/caretrace.js"></script>
+</body>
+</html>
