@@ -29,7 +29,7 @@ Estado funcional do repositório. Esta matriz separa deliberadamente **fluxo dem
 | 11 | Farmácia / materiais / almoxarifado | IMPLEMENTADO POC | conciliação medicamentosa, ordem clínica ativa, dispensação vinculada, lote, validade, mínimos, fornecedor/NF, inventário/divergência, recall, ciência por unidade, alertas e livro demonstrativo de controlados |
 | 12 | ACS móvel/offline | IMPLEMENTADO POC | PWA offline-first, persistência local, fila de captura sem rede e sincronização posterior |
 | 13 | Cidadão + telemedicina | IMPLEMENTADO POC / EXTERNO no vídeo produtivo | Porta Digital, red flags determinísticas, consentimento/handoff idempotente, sala de espera, preflight, participantes, máquina de estados, teleconsulta e resumo clínico |
-| 14 | Analytics / gestão / evidência | IMPLEMENTADO POC | Command Center, dashboards, regulação aging, risco de abastecimento, segurança clínica, SLA, Contract Pack, runner 14/14, Evidence Ledger, CareTrace, AI Flight Recorder, Production Gates e Evidence Pack verificável |
+| 14 | Analytics / gestão / evidência | IMPLEMENTADO POC | Command Center, dashboards, regulação aging, risco de abastecimento, segurança clínica, SLA, Contract Pack, runner 14/14, Evidence Ledger, CareTrace, AI Flight Recorder, Production Gates, Evidence Pack, preflight browser e Dossiê da Banca com identidade do build |
 
 ## Diferenciais HealthOS demonstráveis
 
@@ -39,7 +39,7 @@ Estado funcional do repositório. Esta matriz separa deliberadamente **fluxo dem
 
 ### Runner dos 14 blocos
 
-`POST /api/poc/verification/run` verifica os 14 blocos contra o estado funcional da instância e grava evidências requisito a requisito no Evidence Ledger. A baseline validada executa **14/14 blocos** no smoke integrado.
+`POST /api/poc/verification/run` verifica os 14 blocos contra o estado funcional da instância e grava evidências requisito a requisito no Evidence Ledger. A baseline validada executa **14/14 blocos**.
 
 ### Evidence Pack da banca
 
@@ -56,6 +56,43 @@ Estado funcional do repositório. Esta matriz separa deliberadamente **fluxo dem
 - SHA-256 calculado sobre JSON canônico determinístico.
 
 `/evidence-pack.html` apresenta o pacote e permite verificar/exportar o JSON. `/api/poc/evidence-pack/latest/verify` recalcula o hash e verifica também a cadeia do Evidence Ledger.
+
+### Preparar Banca + Browser E2E
+
+`POST /api/poc/presentation/prepare` orquestra a preparação e só devolve `ready=true` quando passam os **8 checks** do preflight:
+
+1. cenário ouro;
+2. runner 14/14;
+3. Evidence Pack;
+4. páginas críticas;
+5. assets críticos;
+6. Evidence Ledger;
+7. governança de integrações;
+8. exposição dos blockers não-código.
+
+A baseline do run 30 validou **23 páginas**, **11 assets** e **8/8 checks**. Playwright/Chromium testa login + MFA, botão `Preparar banca completa`, Evidence Pack, Dossiê e superfícies críticas de apresentação.
+
+### Dossiê da Banca e identidade do build
+
+`POST /api/poc/dossier` congela:
+
+- o preflight da apresentação;
+- o Evidence Pack integral;
+- a identidade do build/processo;
+- os blockers explícitos;
+- disclaimers de não-produção.
+
+O artefato recebe:
+
+- SHA-256 canônico próprio;
+- código curto `JUN-XXXX-XXXX-XXXX` derivado do hash;
+- endpoint independente de verificação;
+- exportação JSON;
+- tela `/dossier.html` pronta para impressão/PDF.
+
+`GET /api/platform/build-identity` expõe revisão e run quando `JUNDIAI_BUILD_SHA`, `GITHUB_SHA` ou equivalentes são injetados. No GitHub Actions do run 30, o browser E2E comprovou que a revisão exportada pelo Dossiê era exatamente o `GITHUB_SHA` da execução.
+
+Isso é uma **prova de integridade e provenance demonstrativa**, não assinatura de release, SBOM formal ou attestation produtiva.
 
 ### Cenário Ouro
 
@@ -79,7 +116,7 @@ O AI Flight Recorder registra modelo, versão, prompt, hash de entrada/saída, c
 
 ### Registro de integrações
 
-CadSUS, RNDS, SI-PNI, e-SUS APS, DATASUS BPA, SIGTAP, BNAFAR/Hórus, PACS, LIS, gov.br, ICP-Brasil, carimbo do tempo e vídeo são tratados como integrações governadas. O sistema **não permite marcar homologated/production_enabled sem EvidenceReference explícita**.
+CadSUS, RNDS, SI-PNI, e-SUS APS, DATASUS BPA, SIGTAP, BNAFAR/Hórus, PACS, LIS, gov.br, ICP-Brasil, carimbo do tempo e vídeo são tratados como integrações governadas. O sistema **não permite marcar `homologated`/`production_enabled` sem EvidenceReference explícita**.
 
 ### Persistência e recovery
 
@@ -123,47 +160,39 @@ Há service desk demonstrativo com severidade/SLA, transições e breach, mais p
 - backup gerenciado, PITR, cópia offsite, restauração em ambiente isolado, RTO/RPO contratual e failover/DR;
 - workers/broker de integração, backoff/jitter e inbox/outbox por adapter produtivo;
 - testes de carga/capacidade com volumetria real municipal;
-- E2E em navegador cobrindo os 14 blocos;
+- ampliar E2E de navegador para jornadas negativas, acessibilidade, responsividade, múltiplos browsers/dispositivos e todos os fluxos de negócio por bloco;
 - implantação e migração reais do legado CIJUN;
 - assinatura ICP-Brasil/carimbo de tempo reais;
 - provedor de vídeo e rede TURN conforme arquitetura final;
 - layouts/protocolos oficiais vigentes de DATASUS/e-SUS e demais sistemas;
-- credenciais/homologações CadSUS, RNDS, SI-PNI, BNAFAR/Hórus, PACS/LIS etc.
+- credenciais/homologações CadSUS, RNDS, SI-PNI, BNAFAR/Hórus, PACS/LIS etc.;
+- SBOM formal, release assinada, artifact attestation e supply-chain provenance produtiva.
 
-## Baseline técnica validada — run 27
+## Baseline técnica validada — run 30
 
-O run consolidado **27** (`32940318166`) validou a wave do Evidence Pack junto de toda a baseline anterior:
+A baseline consolidada atual está detalhada em `docs/VALIDATION_BASELINE.md`.
 
-- JavaScript, incluindo `evidence-pack.js`, passou em `node --check`;
-- scripts shell passaram em `bash -n`;
-- higiene de segredos do repositório público passou;
-- restore .NET 8 passou;
-- build Release passou com **0 warnings e 0 errors**;
-- `Smoke POC consolidado v3 OK`;
-- `Smoke plataforma + Evidence Pack OK`;
-- `Smoke wave 4 OK` com jornada relacional integrada;
-- PostgreSQL 16 real com migrations sem pendência;
-- checkpoint básico + checkpoint completo de 19+ contextos;
-- manifesto SHA-256 e hash canônico após round-trip `jsonb`;
-- recovery drill e restore preview;
-- inbox idempotente;
-- outbox processada e replay idempotente;
-- retry → dead-letter → requeue justificado;
-- trilha de evidência para recovery/messaging.
+- **Data:** 26/08/2026
+- **Run:** 30
+- **Run ID:** `32954612211`
+- **Commit validado:** `9cc2edcb47b24e3523d817b9c4f3d18ad5409408`
+- **Conclusão:** success
 
-No smoke do Evidence Pack foram exigidos:
+O run comprovou em uma mesma execução:
 
-- `14/14` blocos;
-- 14 blocos indexados no pacote;
-- presença explícita do blocker documental `HAB-AT-29`;
-- SHA-256 do pacote com 64 caracteres;
-- `packageHashValid=true`;
-- `ledgerChainValid=true`;
-- `demonstrationIntegrityReady=true`;
-- export JSON preservando o mesmo `packId`.
+- validação de JavaScript e shell;
+- higiene básica de segredo no repositório público;
+- restore/build Release .NET 8;
+- smokes funcional, plataforma e wave 4;
+- runner 14/14;
+- preflight 8/8, 23 páginas e 11 assets;
+- Evidence Pack íntegro;
+- Dossiê da Banca com hash/código/export e `sourceRevision == GITHUB_SHA` no CI;
+- **4 testes Chromium E2E**;
+- PostgreSQL 16, migrations, checkpoints, recovery drill, inbox/outbox, idempotência, retry, dead-letter e requeue.
 
-Após a validação, o GitHub Actions foi retornado para **manual-only**.
+Após a validação, o GitHub Actions foi retornado para **manual-only** e não houve run 31 automático.
 
 ## Bloqueador comercial/documental crítico
 
-A qualidade da POC **não substitui a habilitação**. A comprovação de capacidade técnica exigida pelo certame — incluindo o requisito relacionado ao quantitativo de unidades de saúde identificado na análise do edital — deve ser resolvida documentalmente em paralelo.
+A qualidade da POC **não substitui a habilitação**. A comprovação de capacidade técnica exigida pelo certame — incluindo o requisito relacionado ao quantitativo de unidades de saúde identificado na análise do edital — deve ser resolvida documentalmente em paralelo. O software preserva esse fato explicitamente como `HAB-AT-29`.
