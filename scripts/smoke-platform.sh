@@ -66,14 +66,18 @@ curl -fsS "${AUTH[@]}" "$BASE_URL/api/poc/presentation/checklist" | assert_json 
 BUILD=$(curl -fsS "${AUTH[@]}" "$BASE_URL/api/platform/build-identity")
 python3 -c 'import json,sys,os; d=json.load(sys.stdin); assert d["service"]=="Jundiai HealthOS" and d["contract"]=="RCE 008/2026"; assert d["repository"].endswith("teste-de-jundiai-definitivo"); assert d["runtime"] and d["runtimeIdentifier"]; expected=os.environ.get("JUNDIAI_BUILD_SHA") or os.environ.get("GITHUB_SHA"); assert (not expected) or d["sourceRevision"]==expected' <<<"$BUILD"
 
+# Inventário POC deve estar embarcado, hasheado e continuar explicitamente diferente de SBOM formal.
+INVENTORY=$(curl -fsS "${AUTH[@]}" "$BASE_URL/api/platform/dependency-inventory")
+python3 -c 'import json,sys; d=json.load(sys.stdin); s=d["summary"]; assert s["exists"] is True and len(s["sha256"])==64; assert s["formalSbom"] is False; assert s["dotnetDirectDependencies"]==2 and s["npmDirectDependencies"]==1 and s["containerImages"]==3; assert s["npmLockfile"]=="absent"; assert d["inventory"]["formalSbom"] is False' <<<"$INVENTORY"
+
 # Provenance dos bytes realmente carregados pela instância.
 RELEASE=$(curl -fsS "${AUTH[@]}" "$BASE_URL/api/platform/release-provenance")
-python3 -c 'import json,sys,os; d=json.load(sys.stdin); p=d["payload"]; assert len(d["manifestSha256"])==64; assert p["runtimeArtifactsComplete"] is True; assert len(p["files"])==3 and all(x["exists"] and x["bytes"]>0 and len(x["sha256"])==64 for x in p["files"]); assert len(p["runtimeLibraries"])>0 and len(p["runtimeLibrariesSha256"])==64; expected=os.environ.get("JUNDIAI_BUILD_SHA") or os.environ.get("GITHUB_SHA"); assert (not expected) or p["build"]["sourceRevision"]==expected' <<<"$RELEASE"
-curl -fsS "${AUTH[@]}" "$BASE_URL/api/platform/release-provenance/verify" | assert_json 'd["integrityReady"] is True and d["manifestHashValid"] is True and d["runtimeFilesValid"] is True and len(d["files"])==3 and all(x["valid"] for x in d["files"])'
+python3 -c 'import json,sys,os; d=json.load(sys.stdin); p=d["payload"]; assert len(d["manifestSha256"])==64; assert p["runtimeArtifactsComplete"] is True; assert len(p["files"])==4 and all(x["exists"] and x["bytes"]>0 and len(x["sha256"])==64 for x in p["files"]); assert any(x["name"]=="supply-chain.inventory.json" for x in p["files"]); assert p["dependencyInventory"]["exists"] is True and p["dependencyInventory"]["formalSbom"] is False and len(p["dependencyInventory"]["sha256"])==64; assert len(p["runtimeLibraries"])>0 and len(p["runtimeLibrariesSha256"])==64; expected=os.environ.get("JUNDIAI_BUILD_SHA") or os.environ.get("GITHUB_SHA"); assert (not expected) or p["build"]["sourceRevision"]==expected' <<<"$RELEASE"
+curl -fsS "${AUTH[@]}" "$BASE_URL/api/platform/release-provenance/verify" | assert_json 'd["integrityReady"] is True and d["manifestHashValid"] is True and d["runtimeFilesValid"] is True and len(d["files"])==4 and all(x["valid"] for x in d["files"])'
 
 # Dossiê final: congela preflight + Evidence Pack + build + provenance em payload canônico verificável.
 DOSSIER=$(curl -fsS -X POST "${AUTH[@]}" "$BASE_URL/api/poc/dossier" -H 'Content-Type: application/json' -d '{"actor":"smoke.dossier","refreshPreflight":false}')
-DOSSIER_CODE=$(python3 -c 'import json,sys,re,os; d=json.load(sys.stdin); assert re.fullmatch(r"JUN-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}", d["verificationCode"]); assert len(d["dossierSha256"])==64; p=d["payload"]; assert p["preflight"]["ready"] is True and p["preflight"]["passedBlocks"]==14 and p["preflight"]["totalBlocks"]==14; assert len(p["evidencePack"]["packageSha256"])==64; assert p["build"]["service"]=="Jundiai HealthOS"; assert len(p["release"]["manifestSha256"])==64 and p["release"]["payload"]["runtimeArtifactsComplete"] is True; assert all(x["exists"] for x in p["release"]["payload"]["files"]); assert any(x["id"]=="HAB-AT-29" for x in p["preflight"]["nonCodeBlockers"]); expected=os.environ.get("JUNDIAI_BUILD_SHA") or os.environ.get("GITHUB_SHA"); assert (not expected) or p["build"]["sourceRevision"]==expected; print(d["verificationCode"])' <<<"$DOSSIER")
+DOSSIER_CODE=$(python3 -c 'import json,sys,re,os; d=json.load(sys.stdin); assert re.fullmatch(r"JUN-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}", d["verificationCode"]); assert len(d["dossierSha256"])==64; p=d["payload"]; assert p["preflight"]["ready"] is True and p["preflight"]["passedBlocks"]==14 and p["preflight"]["totalBlocks"]==14; assert len(p["evidencePack"]["packageSha256"])==64; assert p["build"]["service"]=="Jundiai HealthOS"; assert len(p["release"]["manifestSha256"])==64 and p["release"]["payload"]["runtimeArtifactsComplete"] is True; assert len(p["release"]["payload"]["files"])==4 and all(x["exists"] for x in p["release"]["payload"]["files"]); assert p["release"]["payload"]["dependencyInventory"]["formalSbom"] is False; assert any(x["id"]=="HAB-AT-29" for x in p["preflight"]["nonCodeBlockers"]); expected=os.environ.get("JUNDIAI_BUILD_SHA") or os.environ.get("GITHUB_SHA"); assert (not expected) or p["build"]["sourceRevision"]==expected; print(d["verificationCode"])' <<<"$DOSSIER")
 curl -fsS "${AUTH[@]}" "$BASE_URL/api/poc/dossier/$DOSSIER_CODE/verify" | assert_json 'd["integrityReady"] is True and d["dossierHashValid"] is True and d["verificationCodeValid"] is True and d["evidencePackHashValid"] is True and d["evidenceLedgerValid"] is True and d["releaseManifestHashValid"] is True and d["runtimeFilesValid"] is True and d["preflightReady"] is True and d["passedBlocks"]==14 and d["totalBlocks"]==14'
 curl -fsS "${AUTH[@]}" "$BASE_URL/api/poc/dossier/$DOSSIER_CODE/export" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["verificationCode"]==sys.argv[1] and len(d["dossierSha256"])==64 and len(d["payload"]["release"]["manifestSha256"])==64' "$DOSSIER_CODE"
 curl -fsS "${AUTH[@]}" "$BASE_URL/api/poc/dossiers" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert len(d)>=1 and any(x["verificationCode"]==sys.argv[1] and len(x["releaseManifestSha256"])==64 for x in d)' "$DOSSIER_CODE"
@@ -97,6 +101,9 @@ with zipfile.ZipFile(path) as z:
     manifest=json.loads(z.read('manifest.json'))
     assert len(manifest['manifestSha256'])==64
     assert len(manifest['payload']['files'])==5
+    release=json.loads(z.read('release-provenance.json'))
+    assert len(release['payload']['files'])==4
+    assert release['payload']['dependencyInventory']['formalSbom'] is False
     for item in manifest['payload']['files']:
         body=z.read(item['name'])
         assert len(body)==item['bytes']
@@ -107,4 +114,4 @@ curl -fsS "${AUTH[@]}" "$BASE_URL/api/poc/contingency-bundles" | python3 -c 'imp
 # Evidence Ledger recebeu controles de privacidade, runner, pacote, preflight, dossiê e contingência.
 curl -fsS "${AUTH[@]}" "$BASE_URL/api/evidence/ledger" | assert_json 'any(x["action"]=="privacy.break-glass.open" for x in d) and any(x["action"]=="privacy.subject-export.generate" for x in d) and any(x["action"]=="poc.run.complete" for x in d) and any(x["action"]=="poc.evidence-pack.generate" for x in d) and any(x["action"]=="poc.presentation.prepare" for x in d) and any(x["action"]=="poc.dossier.generate" for x in d) and any(x["action"]=="poc.contingency.generate" for x in d)'
 
-echo "Smoke plataforma + Evidence Pack + READY 8/8 + provenance + Dossiê + contingência OK"
+echo "Smoke plataforma + Evidence Pack + READY 8/8 + inventario + provenance + Dossiê + contingência OK"
