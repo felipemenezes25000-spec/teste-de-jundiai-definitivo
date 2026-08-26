@@ -130,19 +130,39 @@ Há service desk demonstrativo com severidade/SLA, transições e breach, mais p
 - layouts/protocolos oficiais vigentes de DATASUS/e-SUS e demais sistemas;
 - credenciais/homologações CadSUS, RNDS, SI-PNI, BNAFAR/Hórus, PACS/LIS etc.
 
-## Validação técnica acumulada
+## Baseline técnica validada — run 27
 
-A baseline anterior passou em CI consolidada com:
+O run consolidado **27** (`32940318166`) validou a wave do Evidence Pack junto de toda a baseline anterior:
 
-- validação de JavaScript e scripts shell;
-- higiene de segredo para repositório público;
-- restore/build Release .NET 8;
-- smoke integrado da POC;
-- smoke de governança/plataforma;
-- smoke da jornada assistencial wave 4;
-- PostgreSQL 16 real com migrations, checkpoints, hash canônico `jsonb`, recovery drill, inbox/outbox, idempotência, retry, dead-letter e requeue.
+- JavaScript, incluindo `evidence-pack.js`, passou em `node --check`;
+- scripts shell passaram em `bash -n`;
+- higiene de segredos do repositório público passou;
+- restore .NET 8 passou;
+- build Release passou com **0 warnings e 0 errors**;
+- `Smoke POC consolidado v3 OK`;
+- `Smoke plataforma + Evidence Pack OK`;
+- `Smoke wave 4 OK` com jornada relacional integrada;
+- PostgreSQL 16 real com migrations sem pendência;
+- checkpoint básico + checkpoint completo de 19+ contextos;
+- manifesto SHA-256 e hash canônico após round-trip `jsonb`;
+- recovery drill e restore preview;
+- inbox idempotente;
+- outbox processada e replay idempotente;
+- retry → dead-letter → requeue justificado;
+- trilha de evidência para recovery/messaging.
 
-O Evidence Pack foi adicionado após essa baseline e deve permanecer coberto pelo smoke de plataforma nas próximas validações consolidadas.
+No smoke do Evidence Pack foram exigidos:
+
+- `14/14` blocos;
+- 14 blocos indexados no pacote;
+- presença explícita do blocker documental `HAB-AT-29`;
+- SHA-256 do pacote com 64 caracteres;
+- `packageHashValid=true`;
+- `ledgerChainValid=true`;
+- `demonstrationIntegrityReady=true`;
+- export JSON preservando o mesmo `packId`.
+
+Após a validação, o GitHub Actions foi retornado para **manual-only**.
 
 ## Bloqueador comercial/documental crítico
 
