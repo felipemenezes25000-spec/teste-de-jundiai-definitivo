@@ -184,30 +184,59 @@ Critérios de saída:
 
 ## Gate 9 — E2E e evidência dos 14 blocos
 
-**Status atual:** FUNDAÇÃO IMPLEMENTADA / BROWSER E2E PENDENTE.
+**Status atual:** FUNDAÇÃO IMPLEMENTADA / BROWSER E2E IMPLEMENTADO PARA A APRESENTAÇÃO.
 
-Já existe:
+Já existe e foi validado no run 30:
 
 - smoke integrado;
 - smoke de governança;
 - smoke assistencial wave 4;
-- runner dos 14 blocos;
+- runner dos 14 blocos com **14/14**;
 - cenário ouro;
 - Evidence Ledger;
 - Evidence Pack com índice dos 14 blocos, integrações, gates, evidências e SHA-256 canônico;
-- exportação JSON verificável;
-- roteiro de banca reproduzível.
+- preflight **8/8**, **23 páginas** e **11 assets** críticos;
+- Dossiê da Banca com hash próprio, código de verificação e identidade de build;
+- exportações JSON verificáveis;
+- Chromium/Playwright com **4 testes E2E** cobrindo login/MFA, `Preparar banca completa`, Evidence Pack, Dossiê e superfícies críticas;
+- conferência no navegador de `sourceRevision == GITHUB_SHA` durante o CI.
+
+Ainda falta para maturidade produtiva ampla:
+
+- jornadas de browser por cada fluxo de negócio dos 14 blocos, inclusive caminhos negativos;
+- testes de acessibilidade;
+- matriz de responsividade/dispositivos;
+- cobertura multibrowser quando necessária;
+- execução de regressão contra infraestrutura final de apresentação/implantação;
+- critérios formais de aceite automatizado por release candidate.
+
+## Gate 10 — Proveniência de release e supply chain
+
+**Status atual:** FUNDAÇÃO POC IMPLEMENTADA / PENDENTE PARA PRODUÇÃO.
+
+Já existe:
+
+- endpoint de identidade do build;
+- captura de repository/revision/run quando injetados pelo CI/deploy;
+- Dossiê da Banca incorporando essa identidade;
+- validação no run 30 de que o `sourceRevision` exportado no navegador era exatamente o `GITHUB_SHA` da execução;
+- hashes canônicos do Evidence Pack e do Dossiê.
+
+Isso ainda **não equivale a provenance de release assinada**.
 
 Critérios de saída:
 
-- E2E real em navegador para fluxos críticos;
-- jornada automatizada de UI por bloco;
-- testes de acessibilidade/responsividade definidos;
-- evidência de build imutável/release candidate;
-- regressão após mudança relevante;
-- execução final do roteiro na infraestrutura de apresentação.
+- manifesto do artefato imutável com hashes do binário e metadados de runtime;
+- SBOM formal CycloneDX/SPDX ou equivalente aprovado;
+- lock/registro de dependências e política de vulnerabilidades;
+- digest imutável da imagem/artefato implantado;
+- artifact attestation/proveniência de build quando adotada;
+- assinatura/verificação do release candidate quando aplicável;
+- relação rastreável `commit → build → artefato → deploy`;
+- política de retenção de evidência de release;
+- processo de promoção/rollback de versão.
 
-## Gate 10 — Habilitação e operação contratual
+## Gate 11 — Habilitação e operação contratual
 
 **Status atual:** FORA DO CÓDIGO / CRÍTICO.
 
@@ -221,8 +250,17 @@ Inclui, entre outros:
 
 A POC não substitui esse gate.
 
+## Baseline de referência
+
+A última validação consolidada está congelada em `docs/VALIDATION_BASELINE.md`:
+
+- run 30;
+- ID `32954612211`;
+- commit `9cc2edcb47b24e3523d817b9c4f3d18ad5409408`;
+- conclusão `success`.
+
 ## Regra de promoção
 
-Nenhuma pontuação alta em `/api/contract/jundiai/readiness`, nenhum `14/14` no runner e nenhum Evidence Pack íntegro promovem automaticamente um Production Gate.
+Nenhuma pontuação alta em `/api/contract/jundiai/readiness`, nenhum `14/14`, nenhum Evidence Pack, nenhum Dossiê íntegro e nenhum browser E2E promovem automaticamente um Production Gate.
 
-A POC mede **demonstrabilidade e coerência técnica**; os Production Gates medem **aptidão para operação real e cumprimento de implantação/contrato**.
+A POC mede **demonstrabilidade, coerência técnica e integridade do estado apresentado**; os Production Gates medem **aptidão para operação real, supply chain, implantação e cumprimento de contrato**.
