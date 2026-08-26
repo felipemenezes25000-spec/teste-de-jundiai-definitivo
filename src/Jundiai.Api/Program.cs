@@ -42,6 +42,7 @@ app.MapGet("/api/citizens/{id:guid}", (Guid id, DemoStore store) =>
 app.MapClinicalEndpoints();
 app.MapIntelligentAccessEndpoints();
 app.MapMunicipalOperations();
+app.MapPsfEsusEndpoints();
 
 app.MapGet("/api/regulation", (DemoStore store) => Results.Ok(store.Regulation()));
 app.MapPost("/api/regulation", (CreateRegulationRequest request, DemoStore store) =>
