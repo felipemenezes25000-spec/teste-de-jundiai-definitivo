@@ -31,8 +31,9 @@ public static class ClinicalOrderEndpoints
             EvidenceLedgerStore evidence) =>
         {
             var order = store.Transition(id, request);
-            demo.AuditExternal(request.Actor, "clinical.order.transition", $"clinical-order:{id}", $"status={order.Status};reason={request.Reason}");
-            evidence.Append(new CreateEvidenceEventRequest(request.Actor, "clinical.order.transition", $"clinical-order:{id}", "POC-B06", $"status={order.Status};reason={request.Reason}", "clinical-order"));
+            var actor = string.IsNullOrWhiteSpace(request.Actor) ? "clinical.operator" : request.Actor.Trim();
+            demo.AuditExternal(actor, "clinical.order.transition", $"clinical-order:{id}", $"status={order.Status};reason={request.Reason}");
+            evidence.Append(new CreateEvidenceEventRequest(actor, "clinical.order.transition", $"clinical-order:{id}", "POC-B06", $"status={order.Status};reason={request.Reason}", "clinical-order"));
             return Results.Ok(order);
         });
 
@@ -85,18 +86,18 @@ public sealed class ClinicalOrderStore
     private readonly ConcurrentDictionary<Guid, List<ClinicalMedicationAdministration>> _administrations = new();
     private readonly ConcurrentDictionary<Guid, CarePlanV2> _carePlans = new();
 
-    public ClinicalOrderStore()
+    public ClinicalOrderStore(DemoStore demo)
     {
-        var citizenId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        var citizen = demo.Citizens().FirstOrDefault() ?? throw new InvalidOperationException("POC sem cidadão seed para ordens clínicas.");
         var now = DateTimeOffset.UtcNow;
         var order = new ClinicalMedicationOrder(
-            Guid.NewGuid(), citizenId, "Maria da Silva", "Medicamento demonstrativo de uso contínuo", "50 mg", "oral", "12/12h",
+            Guid.NewGuid(), citizen.Id, citizen.Name, "Medicamento demonstrativo de uso contínuo", "50 mg", "oral", "12/12h",
             now.AddDays(-7), null, "active", "Dr. Eduardo Martins", "CRM 000001", "Exemplo de ordem clínica sem finalidade prescritiva real.",
             now.AddDays(-7), now.AddDays(-7), null, null);
         _orders[order.Id] = order;
 
         var task = new CarePlanTask(Guid.NewGuid(), "Aferir pressão arterial e registrar evolução", "nurse", "Enf. Juliana Ramos", now.AddDays(1), "open", null, null, null);
-        var plan = new CarePlanV2(Guid.NewGuid(), citizenId, "Maria da Silva", "Acompanhamento longitudinal da condição crônica", "active", "Dr. Eduardo Martins", now.AddDays(-3), [task], now.AddDays(-3));
+        var plan = new CarePlanV2(Guid.NewGuid(), citizen.Id, citizen.Name, "Acompanhamento longitudinal da condição crônica", "active", "Dr. Eduardo Martins", now.AddDays(-3), [task], now.AddDays(-3));
         _carePlans[plan.Id] = plan;
     }
 
@@ -210,25 +211,13 @@ public sealed class ClinicalOrderStore
     };
 }
 
-public sealed record ClinicalMedicationOrder(
-    Guid Id, Guid CitizenId, string CitizenName, string Medication, string Dose, string Route, string Frequency,
-    DateTimeOffset StartsAt, DateTimeOffset? EndsAt, string Status, string OrderedBy, string ProfessionalCouncil,
-    string? Instructions, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, string? LastTransitionBy, string? LastTransitionReason);
-public sealed record CreateClinicalMedicationOrderRequest(
-    Guid CitizenId, string Medication, string Dose, string Route, string Frequency, DateTimeOffset StartsAt,
-    DateTimeOffset? EndsAt, string OrderedBy, string ProfessionalCouncil, string? Instructions);
+public sealed record ClinicalMedicationOrder(Guid Id, Guid CitizenId, string CitizenName, string Medication, string Dose, string Route, string Frequency, DateTimeOffset StartsAt, DateTimeOffset? EndsAt, string Status, string OrderedBy, string ProfessionalCouncil, string? Instructions, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, string? LastTransitionBy, string? LastTransitionReason);
+public sealed record CreateClinicalMedicationOrderRequest(Guid CitizenId, string Medication, string Dose, string Route, string Frequency, DateTimeOffset StartsAt, DateTimeOffset? EndsAt, string OrderedBy, string ProfessionalCouncil, string? Instructions);
 public sealed record ClinicalOrderTransitionRequest(string Status, string? Reason, string? Actor);
-public sealed record ClinicalMedicationAdministration(
-    Guid Id, Guid OrderId, Guid CitizenId, string CitizenName, string Medication, string Dose, string Route,
-    string Outcome, string? Reason, string Professional, string ProfessionalCouncil, DateTimeOffset AdministeredAt, DateTimeOffset RecordedAt);
-public sealed record AdministerClinicalMedicationRequest(
-    string? Dose, string? Route, string? Outcome, string? Reason, string Professional, string ProfessionalCouncil, DateTimeOffset? AdministeredAt);
-public sealed record CarePlanTask(
-    Guid Id, string Description, string Profession, string? Owner, DateTimeOffset? DueAt, string Status,
-    DateTimeOffset? CompletedAt, string? CompletedBy, string? CompletionNote);
-public sealed record CarePlanV2(
-    Guid Id, Guid CitizenId, string CitizenName, string Goal, string Status, string CreatedBy,
-    DateTimeOffset CreatedAt, IReadOnlyList<CarePlanTask> Tasks, DateTimeOffset UpdatedAt);
+public sealed record ClinicalMedicationAdministration(Guid Id, Guid OrderId, Guid CitizenId, string CitizenName, string Medication, string Dose, string Route, string Outcome, string? Reason, string Professional, string ProfessionalCouncil, DateTimeOffset AdministeredAt, DateTimeOffset RecordedAt);
+public sealed record AdministerClinicalMedicationRequest(string? Dose, string? Route, string? Outcome, string? Reason, string Professional, string ProfessionalCouncil, DateTimeOffset? AdministeredAt);
+public sealed record CarePlanTask(Guid Id, string Description, string Profession, string? Owner, DateTimeOffset? DueAt, string Status, DateTimeOffset? CompletedAt, string? CompletedBy, string? CompletionNote);
+public sealed record CarePlanV2(Guid Id, Guid CitizenId, string CitizenName, string Goal, string Status, string CreatedBy, DateTimeOffset CreatedAt, IReadOnlyList<CarePlanTask> Tasks, DateTimeOffset UpdatedAt);
 public sealed record CreateCarePlanTaskRequest(string Description, string Profession, string? Owner, DateTimeOffset? DueAt);
 public sealed record CreateCarePlanRequest(Guid CitizenId, string Goal, string CreatedBy, IReadOnlyList<CreateCarePlanTaskRequest> Tasks);
 public sealed record CompleteCareTaskRequest(string Actor, string? Note);
