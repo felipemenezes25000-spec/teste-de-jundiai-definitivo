@@ -23,6 +23,8 @@ public static class JundiaiPermissions
     public const string ClinicalWrite = "clinical.write";
     public const string RegulationRead = "regulation.read";
     public const string RegulationManage = "regulation.manage";
+    public const string ReferralRead = "referral.read";
+    public const string ReferralWrite = "referral.write";
     public const string SchedulingRead = "scheduling.read";
     public const string SchedulingManage = "scheduling.manage";
     public const string BillingRead = "billing.read";
@@ -60,7 +62,7 @@ public static class JundiaiPermissions
     public static readonly IReadOnlySet<string> All = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
     {
         CitizenRead, ClinicalRead, ClinicalWrite,
-        RegulationRead, RegulationManage, SchedulingRead, SchedulingManage,
+        RegulationRead, RegulationManage, ReferralRead, ReferralWrite, SchedulingRead, SchedulingManage,
         BillingRead, BillingManage, ImmunizationRead, ImmunizationWrite, InventoryRead, InventoryManage,
         PsfRead, PsfWrite, DentalRead, DentalWrite, DiagnosticsRead, DiagnosticsWrite,
         TelemedicineRead, TelemedicineWrite, DocumentsRead, DocumentsWrite,
@@ -79,6 +81,7 @@ public static class JundiaiPermissionCatalog
             [JundiaiRoles.MunicipalManager] = Set(
                 JundiaiPermissions.CitizenRead,
                 JundiaiPermissions.RegulationRead, JundiaiPermissions.RegulationManage,
+                JundiaiPermissions.ReferralRead, JundiaiPermissions.ReferralWrite,
                 JundiaiPermissions.SchedulingRead, JundiaiPermissions.SchedulingManage,
                 JundiaiPermissions.BillingRead, JundiaiPermissions.BillingManage,
                 JundiaiPermissions.ImmunizationRead,
@@ -95,13 +98,14 @@ public static class JundiaiPermissionCatalog
             [JundiaiRoles.Regulator] = Set(
                 JundiaiPermissions.CitizenRead, JundiaiPermissions.ClinicalRead,
                 JundiaiPermissions.RegulationRead, JundiaiPermissions.RegulationManage,
+                JundiaiPermissions.ReferralRead, JundiaiPermissions.ReferralWrite,
                 JundiaiPermissions.SchedulingRead, JundiaiPermissions.SchedulingManage,
                 JundiaiPermissions.DiagnosticsRead,
                 JundiaiPermissions.TelemedicineRead, JundiaiPermissions.TelemedicineWrite,
                 JundiaiPermissions.AnalyticsRead),
             [JundiaiRoles.Auditor] = Set(
                 JundiaiPermissions.CitizenRead, JundiaiPermissions.ClinicalRead,
-                JundiaiPermissions.RegulationRead, JundiaiPermissions.SchedulingRead,
+                JundiaiPermissions.RegulationRead, JundiaiPermissions.ReferralRead, JundiaiPermissions.SchedulingRead,
                 JundiaiPermissions.BillingRead, JundiaiPermissions.ImmunizationRead,
                 JundiaiPermissions.InventoryRead, JundiaiPermissions.PsfRead,
                 JundiaiPermissions.DentalRead, JundiaiPermissions.DiagnosticsRead,
@@ -114,7 +118,7 @@ public static class JundiaiPermissionCatalog
             [JundiaiRoles.Clinician] = Set(
                 JundiaiPermissions.CitizenRead,
                 JundiaiPermissions.ClinicalRead, JundiaiPermissions.ClinicalWrite,
-                JundiaiPermissions.RegulationRead, JundiaiPermissions.SchedulingRead,
+                JundiaiPermissions.RegulationRead, JundiaiPermissions.ReferralRead, JundiaiPermissions.ReferralWrite, JundiaiPermissions.SchedulingRead,
                 JundiaiPermissions.DiagnosticsRead, JundiaiPermissions.DiagnosticsWrite,
                 JundiaiPermissions.TelemedicineRead, JundiaiPermissions.TelemedicineWrite,
                 JundiaiPermissions.DocumentsRead, JundiaiPermissions.DocumentsWrite,
@@ -122,6 +126,7 @@ public static class JundiaiPermissionCatalog
             [JundiaiRoles.Nurse] = Set(
                 JundiaiPermissions.CitizenRead,
                 JundiaiPermissions.ClinicalRead, JundiaiPermissions.ClinicalWrite,
+                JundiaiPermissions.ReferralRead, JundiaiPermissions.ReferralWrite,
                 JundiaiPermissions.SchedulingRead,
                 JundiaiPermissions.ImmunizationRead, JundiaiPermissions.ImmunizationWrite,
                 JundiaiPermissions.PsfRead, JundiaiPermissions.DiagnosticsRead,
@@ -134,6 +139,7 @@ public static class JundiaiPermissionCatalog
             [JundiaiRoles.Dentist] = Set(
                 JundiaiPermissions.CitizenRead,
                 JundiaiPermissions.ClinicalRead, JundiaiPermissions.ClinicalWrite,
+                JundiaiPermissions.ReferralRead, JundiaiPermissions.ReferralWrite,
                 JundiaiPermissions.SchedulingRead,
                 JundiaiPermissions.DentalRead, JundiaiPermissions.DentalWrite,
                 JundiaiPermissions.DiagnosticsRead, JundiaiPermissions.DiagnosticsWrite,
@@ -145,7 +151,7 @@ public static class JundiaiPermissionCatalog
                 JundiaiPermissions.PsfRead, JundiaiPermissions.PsfWrite,
                 JundiaiPermissions.SchedulingRead),
             [JundiaiRoles.Support] = Set(
-                JundiaiPermissions.RegulationRead, JundiaiPermissions.SchedulingRead,
+                JundiaiPermissions.RegulationRead, JundiaiPermissions.ReferralRead, JundiaiPermissions.SchedulingRead,
                 JundiaiPermissions.DiagnosticsRead, JundiaiPermissions.TelemedicineRead,
                 JundiaiPermissions.AuditRead, JundiaiPermissions.ContractRead,
                 JundiaiPermissions.IntegrationRead, JundiaiPermissions.MigrationRead,
@@ -254,11 +260,13 @@ public sealed class DemoAccessControlMiddleware(RequestDelegate next)
         if (path.StartsWithSegments("/api/migration")) return write ? JundiaiPermissions.MigrationManage : JundiaiPermissions.MigrationRead;
         if (path.StartsWithSegments("/api/integrations")) return write ? JundiaiPermissions.IntegrationManage : JundiaiPermissions.IntegrationRead;
         if (path.StartsWithSegments("/api/operations")) return write ? JundiaiPermissions.OperationsManage : JundiaiPermissions.OperationsRead;
+        if (path.StartsWithSegments("/api/professionals")) return write ? JundiaiPermissions.OperationsManage : JundiaiPermissions.OperationsRead;
         if (path.StartsWithSegments("/api/analytics")) return JundiaiPermissions.AnalyticsRead;
         if (path.StartsWithSegments("/api/dashboard") || path.StartsWithSegments("/api/citizens") || path.StartsWithSegments("/api/units")) return JundiaiPermissions.CitizenRead;
         if (path.StartsWithSegments("/api/care-trace")) return JundiaiPermissions.ClinicalRead;
         if (path.StartsWithSegments("/api/documents")) return write ? JundiaiPermissions.DocumentsWrite : JundiaiPermissions.DocumentsRead;
         if (path.StartsWithSegments("/api/clinical") || path.StartsWithSegments("/api/ubs") || path.StartsWithSegments("/api/records")) return write ? JundiaiPermissions.ClinicalWrite : JundiaiPermissions.ClinicalRead;
+        if (path.StartsWithSegments("/api/referrals")) return write ? JundiaiPermissions.ReferralWrite : JundiaiPermissions.ReferralRead;
         if (path.StartsWithSegments("/api/regulation")) return write ? JundiaiPermissions.RegulationManage : JundiaiPermissions.RegulationRead;
         if (path.StartsWithSegments("/api/scheduling")) return write ? JundiaiPermissions.SchedulingManage : JundiaiPermissions.SchedulingRead;
         if (path.StartsWithSegments("/api/telemedicine")) return write ? JundiaiPermissions.TelemedicineWrite : JundiaiPermissions.TelemedicineRead;
