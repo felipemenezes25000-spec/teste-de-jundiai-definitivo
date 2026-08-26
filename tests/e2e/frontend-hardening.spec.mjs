@@ -40,7 +40,7 @@ function collectNetworkProblems(page) {
   const problems = [];
   page.on('pageerror', error => problems.push(`pageerror: ${error.message}`));
   page.on('console', message => {
-    if (message.type() === 'error') problems.push(`console: ${message.text()}`);
+    if (message.type() === 'error') problems.push(`console: ${message.text()}`));
   });
   page.on('response', response => {
     const status = response.status();
@@ -54,7 +54,8 @@ function collectNetworkProblems(page) {
   return problems;
 }
 
-test('25 superfícies críticas não produzem 401/403/5xx em sessão administrativa válida', async ({ page }) => {
+test('24 superfícies autenticadas não produzem 401/403/5xx com sessão administrativa válida', async ({ page }) => {
+  expect(criticalRoutes).toHaveLength(24);
   await authenticate(page);
   const problems = collectNetworkProblems(page);
 
