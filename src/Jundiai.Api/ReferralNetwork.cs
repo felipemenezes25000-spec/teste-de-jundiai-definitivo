@@ -54,12 +54,13 @@ public sealed class ReferralNetworkStore
 {
     private readonly ConcurrentDictionary<Guid, CareReferral> _referrals = new();
 
-    public ReferralNetworkStore()
+    public ReferralNetworkStore(DemoStore demo)
     {
+        var citizen = demo.Citizens().FirstOrDefault() ?? throw new InvalidOperationException("POC sem cidadão seed para referência.");
         var now = DateTimeOffset.UtcNow;
         var item = new CareReferral(
-            Guid.NewGuid(), Guid.Parse("11111111-1111-1111-1111-111111111111"), "Maria da Silva",
-            "UBS Vila Hortolândia", "Cardiologia", "high", "Avaliação de condição crônica e estratificação de risco.",
+            Guid.NewGuid(), citizen.Id, citizen.Name,
+            citizen.HealthUnit, "Cardiologia", "high", "Avaliação de condição crônica e estratificação de risco.",
             "Dr. Eduardo Martins", "CRM 000001", "requested", null, null, null, null, null, null, now.AddDays(-2), now.AddDays(-2));
         _referrals[item.Id] = item;
     }
