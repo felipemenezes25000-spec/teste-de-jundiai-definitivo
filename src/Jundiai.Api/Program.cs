@@ -40,6 +40,8 @@ builder.Services.AddSingleton<PersistenceRecoveryService>();
 builder.Services.AddSingleton<IntegrationMessagingPersistenceService>();
 builder.Services.AddSingleton<PocEvidencePackStore>();
 builder.Services.AddSingleton<PresentationPreparationStore>();
+builder.Services.AddSingleton<BuildIdentityStore>();
+builder.Services.AddSingleton<PresentationDossierStore>();
 builder.Services.AddJundiaiOperationalTelemetry();
 
 var app = builder.Build();
@@ -111,6 +113,8 @@ app.MapPocScenarioEndpoints();
 app.MapPocVerificationRunnerEndpoints();
 app.MapPocEvidencePackEndpoints();
 app.MapPresentationPreparationEndpoints();
+app.MapBuildIdentityEndpoints();
+app.MapPresentationDossierEndpoints();
 app.MapPlatformReadinessEndpoints();
 app.MapJundiaiPersistenceEndpoints();
 app.MapPersistenceRecoveryEndpoints();
