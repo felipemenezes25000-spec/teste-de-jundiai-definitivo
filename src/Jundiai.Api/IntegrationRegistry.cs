@@ -51,7 +51,7 @@ public sealed class IntegrationRegistryStore
         var allowed = new[] { "not_started", "boundary_ready", "credentials_pending", "sandbox_connected", "homologation_pending", "homologated", "production_enabled", "blocked_external" };
         var status = request.Status.Trim().ToLowerInvariant();
         if (!allowed.Contains(status)) throw new ArgumentException("Status de integração inválido.");
-        if (status is "homologated" or "production_enabled" && string.IsNullOrWhiteSpace(request.EvidenceReference))
+        if ((status is "homologated" or "production_enabled") && string.IsNullOrWhiteSpace(request.EvidenceReference))
             throw new ArgumentException("Homologação/produção exige referência explícita de evidência; não é permitido marcar sem prova.");
         var assessment = new IntegrationAssessment(Guid.NewGuid(), status, request.Environment?.Trim() ?? "unknown", request.EndpointReference?.Trim(), request.EvidenceReference?.Trim(), request.Note?.Trim(), request.Actor.Trim(), DateTimeOffset.UtcNow);
         var updated = current with { Status = status, Environment = assessment.Environment, LastAssessment = assessment, UpdatedAt = DateTimeOffset.UtcNow };
