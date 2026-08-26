@@ -7,6 +7,8 @@ public static class MunicipalCommandCenterEndpoints
         endpoints.MapGet("/api/analytics/command-center", (
             DemoStore demo,
             MunicipalOperationsStore operations,
+            ProfessionalRegistryStore professionals,
+            ReferralNetworkStore referrals,
             SchedulingStore scheduling,
             DiagnosticsAdvancedStore diagnostics,
             InventoryAdvancedStore inventory,
@@ -15,16 +17,18 @@ public static class MunicipalCommandCenterEndpoints
             ClinicalOrderStore clinicalOrders,
             SusBillingEngineStore billing,
             TelemedicineStore telemedicine) =>
-            Results.Ok(MunicipalCommandCenter.Build(demo, operations, scheduling, diagnostics, inventory, immunization, pharmacy, clinicalOrders, billing, telemedicine)));
+            Results.Ok(MunicipalCommandCenter.Build(demo, operations, professionals, referrals, scheduling, diagnostics, inventory, immunization, pharmacy, clinicalOrders, billing, telemedicine)));
 
         endpoints.MapGet("/api/analytics/alerts", (
             DemoStore demo,
+            ProfessionalRegistryStore professionals,
+            ReferralNetworkStore referrals,
             SchedulingStore scheduling,
             DiagnosticsAdvancedStore diagnostics,
             InventoryAdvancedStore inventory,
             ClinicalOrderStore clinicalOrders,
             TelemedicineStore telemedicine) =>
-            Results.Ok(MunicipalCommandCenter.Alerts(demo, scheduling, diagnostics, inventory, clinicalOrders, telemedicine)));
+            Results.Ok(MunicipalCommandCenter.Alerts(demo, professionals, referrals, scheduling, diagnostics, inventory, clinicalOrders, telemedicine)));
 
         return endpoints;
     }
@@ -35,6 +39,8 @@ public static class MunicipalCommandCenter
     public static object Build(
         DemoStore demo,
         MunicipalOperationsStore operations,
+        ProfessionalRegistryStore professionals,
+        ReferralNetworkStore referrals,
         SchedulingStore scheduling,
         DiagnosticsAdvancedStore diagnostics,
         InventoryAdvancedStore inventory,
@@ -50,7 +56,7 @@ public static class MunicipalCommandCenter
         var diagnosticOrders = diagnostics.Orders(null);
         var inventoryAlerts = inventory.Alerts();
         var vaccineCoverage = immunization.Coverage(demo);
-        var alerts = Alerts(demo, scheduling, diagnostics, inventory, clinicalOrders, telemedicine);
+        var alerts = Alerts(demo, professionals, referrals, scheduling, diagnostics, inventory, clinicalOrders, telemedicine);
 
         return new
         {
@@ -60,11 +66,15 @@ public static class MunicipalCommandCenter
                 healthUnits = operations.Units().Count,
                 citizens = demo.Citizens().Count,
                 households = demo.Households().Count,
+                professionals = professionals.Search(null, null).Count,
+                credentialAlerts = professionals.CredentialAlerts().Count,
                 activeMedicationOrders = clinicalOrders.Orders(null).Count(x => x.Status == "active")
             },
             access = new
             {
                 regulationOpen = regulation.Count(x => x.Status is "waiting" or "authorized"),
+                referralsOpen = referrals.Referrals(null).Count(x => x.Status is "requested" or "accepted"),
+                counterReferred = referrals.Referrals(null).Count(x => x.Status == "counter_referred"),
                 highPriority = regulation.Count(x => x.Status is "waiting" or "authorized" && x.Priority is "emergency" or "urgent" or "high"),
                 bookings = bookings.Count,
                 noShow = bookings.Count(x => x.Status == "no_show"),
@@ -117,6 +127,8 @@ public static class MunicipalCommandCenter
 
     public static IReadOnlyList<MunicipalOperationalAlert> Alerts(
         DemoStore demo,
+        ProfessionalRegistryStore professionals,
+        ReferralNetworkStore referrals,
         SchedulingStore scheduling,
         DiagnosticsAdvancedStore diagnostics,
         InventoryAdvancedStore inventory,
@@ -132,6 +144,16 @@ public static class MunicipalCommandCenter
             if (item.Priority is "emergency" or "urgent" || days >= 7)
                 alerts.Add(new("regulation", item.Id.ToString(), item.Priority is "emergency" or "urgent" ? "critical" : "high", $"{item.CitizenName}: {item.Specialty} em {item.Status} há {Math.Floor(days)} dia(s).", "Revisar prioridade e destino regulatório."));
         }
+
+        foreach (var referral in referrals.Referrals(null).Where(x => x.Status is "requested" or "accepted"))
+        {
+            var days = (now - referral.CreatedAt).TotalDays;
+            if (referral.Priority is "emergency" or "urgent" || days >= 5)
+                alerts.Add(new("referral", referral.Id.ToString(), referral.Priority is "emergency" or "urgent" ? "critical" : "high", $"Referência de {referral.CitizenName} para {referral.DestinationService} segue em {referral.Status}.", "Revisar aceite, atendimento e contrarreferência."));
+        }
+
+        foreach (var credential in professionals.CredentialAlerts())
+            alerts.Add(new("workforce", credential.ProfessionalId.ToString(), credential.Status == "expired" ? "critical" : "high", $"Credencial {credential.Council} de {credential.Name}: {credential.DaysRemaining} dia(s) restantes.", "Validar situação cadastral antes de manter escala/assinatura clínica."));
 
         foreach (var order in diagnostics.Orders(null).Where(x => x.Result?.Critical == true && x.Result.CriticalAcknowledgementStatus != "acknowledged"))
             alerts.Add(new("diagnostics", order.Id.ToString(), "critical", $"Resultado crítico de {order.ExamName} sem ciência registrada para {order.CitizenName}.", "Registrar ciência e conduta imediatamente."));
