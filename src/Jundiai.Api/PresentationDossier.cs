@@ -45,6 +45,7 @@ public sealed class PresentationDossierStore(
     PresentationPreparationStore presentation,
     PocEvidencePackStore evidencePack,
     BuildIdentityStore buildIdentity,
+    ReleaseProvenanceStore releaseProvenance,
     EvidenceLedgerStore evidence,
     DemoStore demo)
 {
@@ -77,6 +78,7 @@ public sealed class PresentationDossierStore(
                     x.Payload.Preflight.PassedBlocks,
                     x.Payload.Preflight.TotalBlocks,
                     x.Payload.EvidencePack.PackageSha256,
+                    x.Payload.Release.ManifestSha256,
                     x.DossierSha256,
                     x.Payload.Build.SourceRevision,
                     x.Payload.Build.ValidationRunId))
@@ -92,10 +94,11 @@ public sealed class PresentationDossierStore(
             : presentation.Latest()!;
         var pack = evidencePack.Latest() ?? throw new InvalidOperationException("Evidence Pack não foi gerado pelo preflight.");
         var build = buildIdentity.Snapshot();
+        var release = releaseProvenance.Snapshot();
 
         var payload = new PresentationDossierPayload(
             "JUNDIAI-RCE-008-2026-POC",
-            "2026.08.26-dossier-v1",
+            "2026.08.26-dossier-v2",
             Guid.NewGuid(),
             DateTimeOffset.UtcNow,
             actor,
@@ -104,11 +107,13 @@ public sealed class PresentationDossierStore(
             preflight,
             pack,
             build,
+            release,
             new[]
             {
                 "Este dossiê registra o estado demonstrável da POC no instante de geração.",
-                "O SHA-256 do dossiê cobre preflight, Evidence Pack e identidade de build informada pelo processo.",
+                "O SHA-256 do dossiê cobre preflight, Evidence Pack, identidade de build e manifesto dos artefatos runtime.",
                 "Código de verificação é derivado do hash do dossiê e serve para conferência rápida dentro desta instância.",
+                "O manifesto runtime hasheia DLL/deps/runtimeconfig, mas não é apresentado como SBOM formal nem attestation assinada.",
                 "HAB-AT-29, homologações externas, operação 24x7 e demais obrigações não-código permanecem fora da capacidade de resolução do software.",
                 "Integridade de POC não equivale a assinatura ICP-Brasil, carimbo do tempo oficial, homologação ou autorização de produção."
             });
@@ -130,7 +135,7 @@ public sealed class PresentationDossierStore(
             "poc.dossier.generate",
             $"dossier:{payload.DossierId}",
             "POC-ALL",
-            $"code={code};sha256={dossierSha};pack={pack.PackageSha256};build={build.SourceRevision ?? "not-injected"}",
+            $"code={code};sha256={dossierSha};pack={pack.PackageSha256};release={release.ManifestSha256};build={build.SourceRevision ?? "not-injected"}",
             "presentation-dossier"));
         demo.AuditExternal(actor, "poc.dossier.generate", $"dossier:{payload.DossierId}", $"{code};{dossierSha}");
         return artifact;
@@ -143,12 +148,14 @@ public sealed class PresentationDossierStore(
         var dossierHashValid = string.Equals(calculated, artifact.DossierSha256, StringComparison.OrdinalIgnoreCase);
         var codeValid = string.Equals(VerificationCode(calculated), artifact.VerificationCode, StringComparison.OrdinalIgnoreCase);
         var packVerification = evidencePack.Verify(artifact.Payload.EvidencePack);
+        var releaseVerification = releaseProvenance.Verify(artifact.Payload.Release);
         var preflightReady = artifact.Payload.Preflight.Ready &&
                              artifact.Payload.Preflight.PassedBlocks == 14 &&
                              artifact.Payload.Preflight.TotalBlocks == 14;
         var ledger = evidence.Verify();
         var buildRevisionBound = !string.IsNullOrWhiteSpace(artifact.Payload.Build.SourceRevision);
-        var integrityReady = dossierHashValid && codeValid && packVerification.DemonstrationIntegrityReady && preflightReady && ledger.Valid;
+        var integrityReady = dossierHashValid && codeValid && packVerification.DemonstrationIntegrityReady &&
+                             releaseVerification.IntegrityReady && preflightReady && ledger.Valid;
 
         return new PresentationDossierVerification(
             artifact.Payload.DossierId,
@@ -158,6 +165,8 @@ public sealed class PresentationDossierStore(
             codeValid,
             packVerification.PackageHashValid,
             packVerification.LedgerChainValid && ledger.Valid,
+            releaseVerification.ManifestHashValid,
+            releaseVerification.RuntimeFilesValid,
             preflightReady,
             buildRevisionBound,
             artifact.Payload.Build.SourceRevision,
@@ -167,9 +176,9 @@ public sealed class PresentationDossierStore(
             artifact.Payload.Preflight.PassedBlocks,
             artifact.Payload.Preflight.TotalBlocks,
             DateTimeOffset.UtcNow,
-            buildRevisionBound
-                ? "Dossiê íntegro e vinculado a uma revisão de código informada pelo processo. Isso não substitui assinatura de release/SBOM/attestation produtivos."
-                : "Dossiê pode estar íntegro, mas esta instância não recebeu JUNDIAI_BUILD_SHA/GITHUB_SHA; injete a revisão no deploy para vínculo explícito com o commit.");
+            integrityReady
+                ? "Dossiê, Evidence Pack, ledger e artefatos runtime conferem nesta instância. Isso não substitui release assinada/SBOM/attestation produtivos."
+                : "Uma ou mais provas do dossiê divergem; investigue antes de usar este artefato como evidência da apresentação.");
     }
 
     private static string VerificationCode(string sha256)
@@ -191,6 +200,7 @@ public sealed record PresentationDossierPayload(
     PresentationPreparationResult Preflight,
     PocEvidencePackArtifact EvidencePack,
     BuildIdentitySnapshot Build,
+    ReleaseProvenanceArtifact Release,
     IReadOnlyList<string> Disclaimers);
 public sealed record PresentationDossierArtifact(
     PresentationDossierPayload Payload,
@@ -206,6 +216,7 @@ public sealed record PresentationDossierSummary(
     int PassedBlocks,
     int TotalBlocks,
     string EvidencePackSha256,
+    string ReleaseManifestSha256,
     string DossierSha256,
     string? SourceRevision,
     string? ValidationRunId);
@@ -217,6 +228,8 @@ public sealed record PresentationDossierVerification(
     bool VerificationCodeValid,
     bool EvidencePackHashValid,
     bool EvidenceLedgerValid,
+    bool ReleaseManifestHashValid,
+    bool RuntimeFilesValid,
     bool PreflightReady,
     bool BuildRevisionBound,
     string? SourceRevision,
