@@ -8,6 +8,7 @@ public static class CareTraceEndpoints
             Guid citizenId,
             DemoStore demo,
             SchedulingStore scheduling,
+            ReferralNetworkStore referrals,
             DiagnosticsAdvancedStore diagnostics,
             TelemedicineStore telemedicine,
             ClinicalDocumentStore documents,
@@ -17,7 +18,7 @@ public static class CareTraceEndpoints
         {
             var citizen = demo.Citizen(citizenId);
             if (citizen is null) return Results.NotFound();
-            return Results.Ok(CareTraceBuilder.Build(citizen, demo, scheduling, diagnostics, telemedicine, documents, clinicalOrders, dental, billing));
+            return Results.Ok(CareTraceBuilder.Build(citizen, demo, scheduling, referrals, diagnostics, telemedicine, documents, clinicalOrders, dental, billing));
         });
         endpoints.MapGet("/api/care-trace/{citizenId:guid}/continuity", (
             Guid citizenId,
@@ -35,7 +36,7 @@ public static class CareTraceEndpoints
         {
             implemented = new[]
             {
-                "citizen-root", "regulation", "scheduling", "territory", "ACS", "immunization", "diagnostics",
+                "citizen-root", "regulation", "reference-counter-reference", "scheduling", "territory", "ACS", "immunization", "diagnostics",
                 "telemedicine", "documents", "clinical-orders", "MAR", "care-plan", "dental", "SUS-production", "pharmacy-dispense", "continuity-gaps"
             },
             purpose = "Unificar evidência longitudinal de cuidado entre módulos sem criar um prontuário paralelo.",
@@ -51,6 +52,7 @@ public static class CareTraceBuilder
         Citizen citizen,
         DemoStore demo,
         SchedulingStore scheduling,
+        ReferralNetworkStore referrals,
         DiagnosticsAdvancedStore diagnostics,
         TelemedicineStore telemedicine,
         ClinicalDocumentStore documents,
@@ -83,6 +85,19 @@ public static class CareTraceBuilder
         {
             var node = Add(nodes, "regulation", regulation.Id.ToString(), regulation.Specialty, regulation.RequestedAt, new Dictionary<string,string>{{"status",regulation.Status},{"priority",regulation.Priority},{"origin",regulation.OriginUnit},{"destination",regulation.DestinationUnit ?? ""}});
             Link(edges, root, node, "requested_care");
+        }
+
+        foreach (var referral in referrals.Referrals(citizen.Id))
+        {
+            var node = Add(nodes, "referral", referral.Id.ToString(), $"{referral.OriginUnit} → {referral.DestinationService}", referral.UpdatedAt, new Dictionary<string,string>
+            {
+                ["status"] = referral.Status,
+                ["priority"] = referral.Priority,
+                ["clinicalQuestion"] = referral.ClinicalQuestion,
+                ["returnToUnit"] = referral.ReturnToUnit ?? "",
+                ["counterPlan"] = referral.CounterPlan ?? ""
+            });
+            Link(edges, root, node, referral.Status == "counter_referred" ? "counter_referred_care" : "referred_care");
         }
 
         foreach (var booking in scheduling.Bookings().Where(x => x.CitizenId == citizen.Id))
