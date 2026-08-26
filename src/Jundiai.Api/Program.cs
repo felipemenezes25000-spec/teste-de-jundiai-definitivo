@@ -27,8 +27,11 @@ builder.Services.AddSingleton<LegacyMigrationStore>();
 builder.Services.AddSingleton<IntegrationRegistryStore>();
 builder.Services.AddSingleton<OperationalReadinessStore>();
 builder.Services.AddSingleton<PocScenarioStore>();
+builder.Services.AddJundiaiPersistence(builder.Configuration);
 
 var app = builder.Build();
+await app.InitializeJundiaiPersistenceAsync();
+
 app.UseJundiaiProblemDetails();
 app.UseDefaultFiles();
 app.UseStaticFiles();
@@ -43,15 +46,17 @@ app.Use(async (context, next) =>
     await next();
 });
 
+app.UseJundiaiTenantContext();
 app.UseJundiaiDemoAuthentication();
 app.UseJundiaiDemoAccessControl();
 
-app.MapGet("/api/health", () => Results.Ok(new
+app.MapGet("/api/health", (PersistenceRuntimeState persistence) => Results.Ok(new
 {
     status = "ok",
     service = "Jundiai HealthOS POC",
     contract = "RCE 008/2026",
     runtime = ".NET 8",
+    persistence = persistence.Mode,
     time = DateTimeOffset.UtcNow
 }));
 
@@ -82,6 +87,7 @@ app.MapOperationalReadinessEndpoints();
 app.MapPopulationAnalyticsEndpoints();
 app.MapPocScenarioEndpoints();
 app.MapPlatformReadinessEndpoints();
+app.MapJundiaiPersistenceEndpoints();
 
 app.MapGet("/api/regulation", (DemoStore store) => Results.Ok(store.Regulation()));
 app.MapPost("/api/regulation", (CreateRegulationRequest request, DemoStore store) =>
