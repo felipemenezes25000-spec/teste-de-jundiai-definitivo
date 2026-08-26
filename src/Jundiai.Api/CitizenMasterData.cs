@@ -140,14 +140,14 @@ public sealed class CitizenMasterDataStore
     {
         lock (_gate)
         {
-            var active = _profiles.Values.Where(x => x.Status == "active").OrderBy(x => x.Id).ToArray();
+            var active = _profiles.Values.Where(x => x.Status == "active").OrderBy(x => x.CitizenId).ToArray();
             var candidates = new List<CitizenDuplicateCandidate>();
             for (var i = 0; i < active.Length; i++)
             for (var j = i + 1; j < active.Length; j++)
             {
                 var a = active[i]; var b = active[j];
                 var score = DuplicateScore(a, b, out var reasons);
-                if (score >= 60) candidates.Add(new CitizenDuplicateCandidate(a.Id, a.Name, b.Id, b.Name, score, reasons));
+                if (score >= 60) candidates.Add(new CitizenDuplicateCandidate(a.CitizenId, a.Name, b.CitizenId, b.Name, score, reasons));
             }
             return candidates.OrderByDescending(x => x.Score).ThenBy(x => x.NameA).ToList();
         }
@@ -215,6 +215,7 @@ public sealed class CitizenMasterDataStore
         if (Normalize(a.Name) == Normalize(b.Name)) { score += 35; list.Add("nome idêntico normalizado"); }
         if (a.BirthDate == b.BirthDate) { score += 25; list.Add("data de nascimento idêntica"); }
         if (!string.IsNullOrWhiteSpace(a.ResponsibleName) && Normalize(a.ResponsibleName) == Normalize(b.ResponsibleName)) { score += 10; list.Add("responsável idêntico"); }
+        reasons = list;
         return Math.Min(score, 100);
     }
 
