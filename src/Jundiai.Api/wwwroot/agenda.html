@@ -6,16 +6,16 @@
   <title>Jundiaí HealthOS · Agenda Central</title>
   <link rel="stylesheet" href="/poc.css" />
   <style>
-    .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.toolbar label{font-size:12px;font-weight:800;color:var(--muted);display:grid;gap:5px}.toolbar select,.toolbar input{padding:10px 11px;border:1px solid var(--line);border-radius:10px;background:#fff;min-width:180px}.slot-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.slot{border:1px solid var(--line);border-radius:14px;padding:13px;background:#fff}.slot.full{opacity:.55}.slot.blocked{background:#fff6f5;border-color:#efd4d0}.slot strong{display:block}.slot small{color:var(--muted)}.slot .actions{display:flex;gap:6px;margin-top:10px}.slot .actions button{padding:7px 9px;font-size:11px;margin:0}.quota{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px}.bar{height:9px;background:#edf1f5;border-radius:99px;overflow:hidden;margin-top:8px}.bar span{display:block;height:100%;background:#1f689f}.wait{display:grid;grid-template-columns:1fr auto;gap:10px;padding:10px 0;border-bottom:1px solid #edf1f5}.wait small{display:block;color:var(--muted)}.notice{padding:14px;border-radius:12px;background:#f7fbff;border:1px solid #dfeaf5;color:#52687e;margin-top:12px}@media(max-width:950px){.slot-grid{grid-template-columns:1fr 1fr}}@media(max-width:650px){.slot-grid{grid-template-columns:1fr}}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.toolbar label{font-size:12px;font-weight:800;color:var(--muted);display:grid;gap:5px}.toolbar select,.toolbar input{padding:10px 11px;border:1px solid var(--line);border-radius:10px;background:#fff;min-width:180px}.slot-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.slot{border:1px solid var(--line);border-radius:14px;padding:13px;background:#fff}.slot.full{opacity:.55}.slot.blocked{background:#fff6f5;border-color:#efd4d0}.slot strong{display:block}.slot small{color:var(--muted)}.slot .actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}.slot .actions button{padding:7px 9px;font-size:11px;margin:0}.quota{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px}.bar{height:9px;background:#edf1f5;border-radius:99px;overflow:hidden;margin-top:8px}.bar span{display:block;height:100%;background:#1f689f}.wait,.booking{display:grid;grid-template-columns:1fr auto;gap:10px;padding:10px 0;border-bottom:1px solid #edf1f5}.wait small,.booking small{display:block;color:var(--muted)}.booking .actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:end}.booking .actions button{padding:6px 8px;font-size:10px}.notice{padding:14px;border-radius:12px;background:#f7fbff;border:1px solid #dfeaf5;color:#52687e;margin-top:12px}.loss-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.loss-grid article{background:#fff;border:1px solid var(--line);border-radius:13px;padding:12px}.loss-grid strong{font-size:22px;display:block}.loss-grid small{color:var(--muted)}@media(max-width:950px){.slot-grid{grid-template-columns:1fr 1fr}.loss-grid{grid-template-columns:1fr 1fr}}@media(max-width:650px){.slot-grid,.loss-grid{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
 <header class="top">
-  <div class="brand"><div class="brand-mark">A</div><div><strong>Agenda Central</strong><small>grades, cotas, capacidade e fila regulada</small></div></div>
+  <div class="brand"><div class="brand-mark">A</div><div><strong>Agenda Central</strong><small>grades, cotas, lifecycle e fila regulada</small></div></div>
   <div class="top-actions"><a class="button ghost" href="/poc.html">← Modo POC</a><a class="button ghost" href="/">Regulação</a></div>
 </header>
 <main class="shell">
-  <section class="hero"><div><p class="eyebrow">Bloco 04 · Agendamento</p><h1>Agenda é política operacional, não só calendário</h1><p>Grades por unidade/especialidade, capacidade, encaixe configurado, cotas e fila de espera com promoção por prioridade.</p></div><div class="score" style="--score:91%"><div><strong id="slot-count">—</strong><span>slots POC</span></div></div></section>
+  <section class="hero"><div><p class="eyebrow">Bloco 04 · Agendamento</p><h1>Agenda é política operacional, não só calendário</h1><p>Grades por unidade/especialidade, capacidade, encaixe configurado, cotas, fila de espera, falta, cancelamento, remarcação e perda de agenda.</p></div><div class="score" style="--score:94%"><div><strong id="slot-count">—</strong><span>slots POC</span></div></div></section>
   <div id="error" class="risk" hidden></div>
 
   <div class="section-head"><div><h2>Disponibilidade</h2><p>Filtre e opere slots do cenário demonstrativo.</p></div></div>
@@ -33,6 +33,13 @@
 
   <div class="section-head"><div><h2>Cotas</h2><p>Reserva de capacidade por origem de demanda.</p></div></div>
   <section class="module-grid" id="quotas"></section>
+
+  <div class="section-head"><div><h2>Agendamentos</h2><p>Lifecycle operacional: check-in, conclusão, falta, cancelamento e remarcação.</p></div></div>
+  <section class="module" id="bookings"></section>
+
+  <div class="section-head"><div><h2>Perda e ocupação</h2><p>Visão de no-show, cancelamento e ocupação por especialidade.</p></div></div>
+  <section class="loss-grid" id="loss-kpis"></section>
+  <section class="module" id="loss-by-specialty" style="margin-top:12px"></section>
 
   <div class="section-head"><div><h2>Fila de espera</h2><p>Prioridade explícita e promoção para um slot disponível.</p></div><button id="enqueue">Adicionar cidadão selecionado</button></div>
   <section class="module" id="waitlist"></section>
