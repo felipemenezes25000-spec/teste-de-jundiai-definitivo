@@ -9,8 +9,19 @@ builder.Services.Configure<JsonOptions>(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
     options.SerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
 });
+
 builder.Services.AddSingleton<DemoStore>();
 builder.Services.AddSingleton<MunicipalOperationsStore>();
+builder.Services.AddSingleton<DemoIdentityStore>();
+builder.Services.AddSingleton<SchedulingStore>();
+builder.Services.AddSingleton<TelemedicineStore>();
+builder.Services.AddSingleton<SusBillingEngineStore>();
+builder.Services.AddSingleton<DentalAdvancedStore>();
+builder.Services.AddSingleton<DiagnosticsAdvancedStore>();
+builder.Services.AddSingleton<InventoryAdvancedStore>();
+builder.Services.AddSingleton<EvidenceLedgerStore>();
+builder.Services.AddSingleton<ContractPackJundiaiStore>();
+builder.Services.AddSingleton<ClinicalDocumentStore>();
 
 var app = builder.Build();
 app.UseDefaultFiles();
@@ -21,9 +32,12 @@ app.Use(async (context, next) =>
     context.Response.Headers["X-Jundiai-POC"] = "RCE-008-2026";
     context.Response.Headers["X-Content-Type-Options"] = "nosniff";
     context.Response.Headers["X-Frame-Options"] = "SAMEORIGIN";
+    context.Response.Headers["Referrer-Policy"] = "same-origin";
+    context.Response.Headers["Permissions-Policy"] = "camera=(self), microphone=(self), geolocation=(self)";
     await next();
 });
 
+app.UseJundiaiDemoAuthentication();
 app.UseJundiaiDemoAccessControl();
 
 app.MapGet("/api/health", () => Results.Ok(new
@@ -31,6 +45,7 @@ app.MapGet("/api/health", () => Results.Ok(new
     status = "ok",
     service = "Jundiai HealthOS POC",
     contract = "RCE 008/2026",
+    runtime = ".NET 8",
     time = DateTimeOffset.UtcNow
 }));
 
@@ -39,10 +54,20 @@ app.MapGet("/api/citizens", (DemoStore store) => Results.Ok(store.Citizens()));
 app.MapGet("/api/citizens/{id:guid}", (Guid id, DemoStore store) =>
     store.Citizen(id) is { } citizen ? Results.Ok(citizen) : Results.NotFound());
 
+app.MapAuthSecurityEndpoints();
 app.MapClinicalEndpoints();
+app.MapClinicalDocumentEndpoints();
 app.MapIntelligentAccessEndpoints();
 app.MapMunicipalOperations();
 app.MapPsfEsusEndpoints();
+app.MapSchedulingEndpoints();
+app.MapTelemedicineEndpoints();
+app.MapBillingAdvancedEndpoints();
+app.MapDentalAdvancedEndpoints();
+app.MapDiagnosticsAdvancedEndpoints();
+app.MapInventoryAdvancedEndpoints();
+app.MapEvidenceLedgerEndpoints();
+app.MapContractPackJundiaiEndpoints();
 
 app.MapGet("/api/regulation", (DemoStore store) => Results.Ok(store.Regulation()));
 app.MapPost("/api/regulation", (CreateRegulationRequest request, DemoStore store) =>
@@ -88,7 +113,8 @@ app.MapPost("/api/diagnostics/exams", (ScheduleExamRequest request, DemoStore st
 app.MapGet("/api/audit", (DemoStore store) => Results.Ok(store.Audit()));
 app.MapPost("/api/audit/events", (AuditRequest request, HttpContext context, DemoStore store) =>
 {
-    var actor = context.Request.Headers["X-Demo-User"].FirstOrDefault() ?? "poc.operator";
+    var identity = DemoAuthenticationMiddleware.GetIdentity(context);
+    var actor = identity?.UserName ?? context.Request.Headers["X-Demo-User"].FirstOrDefault() ?? "poc.operator";
     store.AuditExternal(actor, request.Action, request.Resource, request.Detail);
     return Results.Accepted();
 });
