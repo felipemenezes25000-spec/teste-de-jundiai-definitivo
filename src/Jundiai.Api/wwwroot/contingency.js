@@ -1,13 +1,12 @@
 const q = s => document.querySelector(s);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const session = () => localStorage.getItem('jundiai.session');
-const role = () => localStorage.getItem('jundiai.role') || 'poc_admin';
 let current = null;
 
 function authHeaders(extra = {}) {
   const token = session();
   return {
-    ...(token ? { Authorization: `Bearer ${token}` } : { 'X-Demo-Role': role(), 'X-Demo-User': localStorage.getItem('jundiai.user') || 'poc.operador' }),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...extra
   };
 }
