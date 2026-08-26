@@ -163,7 +163,7 @@ Critérios de saída:
 - exercício periódico de recuperação;
 - dependências externas inventariadas no plano de continuidade.
 
-> O recovery drill da POC é evidência de engenharia; não deve ser apresentado como DR produtivo certificado.
+> O recovery drill da POC é evidência de engenharia; não deve ser apresentado como DR produtivo certificado. O Kit de Contingência da banca também não é backup ou DR.
 
 ## Gate 8 — Performance e segurança
 
@@ -186,7 +186,7 @@ Critérios de saída:
 
 **Status atual:** FUNDAÇÃO IMPLEMENTADA / BROWSER E2E IMPLEMENTADO PARA A APRESENTAÇÃO.
 
-Já existe e foi validado no run 30:
+Já existe e foi validado no run 33:
 
 - smoke integrado;
 - smoke de governança;
@@ -195,11 +195,12 @@ Já existe e foi validado no run 30:
 - cenário ouro;
 - Evidence Ledger;
 - Evidence Pack com índice dos 14 blocos, integrações, gates, evidências e SHA-256 canônico;
-- preflight **8/8**, **23 páginas** e **11 assets** críticos;
-- Dossiê da Banca com hash próprio, código de verificação e identidade de build;
+- preflight **8/8**, **24 páginas** e **12 assets** críticos;
+- Dossiê da Banca v2 com hash próprio, código de verificação, identidade de build e provenance runtime;
+- Kit de Contingência ZIP com manifesto/hash e HTML autocontido;
 - exportações JSON verificáveis;
-- Chromium/Playwright com **4 testes E2E** cobrindo login/MFA, `Preparar banca completa`, Evidence Pack, Dossiê e superfícies críticas;
-- conferência no navegador de `sourceRevision == GITHUB_SHA` durante o CI.
+- Chromium/Playwright com **5 testes E2E** cobrindo login/MFA, `Preparar banca completa`, Evidence Pack, Dossiê, Kit de Contingência e superfícies críticas;
+- conferência no CI de `sourceRevision == GITHUB_SHA`.
 
 Ainda falta para maturidade produtiva ampla:
 
@@ -212,27 +213,31 @@ Ainda falta para maturidade produtiva ampla:
 
 ## Gate 10 — Proveniência de release e supply chain
 
-**Status atual:** FUNDAÇÃO POC IMPLEMENTADA / PENDENTE PARA PRODUÇÃO.
+**Status atual:** FUNDAÇÃO DE RUNTIME PROVENANCE IMPLEMENTADA / PENDENTE PARA PRODUÇÃO.
 
-Já existe:
+Já existe e foi validado no run 33:
 
 - endpoint de identidade do build;
 - captura de repository/revision/run quando injetados pelo CI/deploy;
-- Dossiê da Banca incorporando essa identidade;
-- validação no run 30 de que o `sourceRevision` exportado no navegador era exatamente o `GITHUB_SHA` da execução;
-- hashes canônicos do Evidence Pack e do Dossiê.
+- runtime artifact manifest canônico;
+- SHA-256 de `Jundiai.Api.dll`, `.deps.json` e `.runtimeconfig.json`;
+- releitura dos bytes e recomputação de hash;
+- inventário das libraries do `.deps.json` e hash do conjunto;
+- Dossiê incorporando identidade + runtime provenance;
+- Kit de Contingência incorporando `release-provenance.json`;
+- validação de que `sourceRevision` no CI correspondia ao `GITHUB_SHA`;
+- hashes canônicos do Evidence Pack, Dossiê, manifesto de contingência e ZIP.
 
-Isso ainda **não equivale a provenance de release assinada**.
+Isso melhora a relação `commit → processo → bytes demonstrados`, mas ainda **não equivale a provenance de release assinada**.
 
 Critérios de saída:
 
-- manifesto do artefato imutável com hashes do binário e metadados de runtime;
 - SBOM formal CycloneDX/SPDX ou equivalente aprovado;
 - lock/registro de dependências e política de vulnerabilidades;
-- digest imutável da imagem/artefato implantado;
+- digest imutável da imagem/artefato efetivamente implantado;
 - artifact attestation/proveniência de build quando adotada;
 - assinatura/verificação do release candidate quando aplicável;
-- relação rastreável `commit → build → artefato → deploy`;
+- relação rastreável `commit → build → artefato → deploy` na infraestrutura final;
 - política de retenção de evidência de release;
 - processo de promoção/rollback de versão.
 
@@ -254,13 +259,15 @@ A POC não substitui esse gate.
 
 A última validação consolidada está congelada em `docs/VALIDATION_BASELINE.md`:
 
-- run 30;
-- ID `32954612211`;
-- commit `9cc2edcb47b24e3523d817b9c4f3d18ad5409408`;
+- run 33;
+- ID `32975517312`;
+- commit `6800cf18e1a76a4b145efbf3a5c563662fa14003`;
 - conclusão `success`.
+
+O workflow foi devolvido para `workflow_dispatch` apenas após essa validação e a contagem permaneceu em 33 runs.
 
 ## Regra de promoção
 
-Nenhuma pontuação alta em `/api/contract/jundiai/readiness`, nenhum `14/14`, nenhum Evidence Pack, nenhum Dossiê íntegro e nenhum browser E2E promovem automaticamente um Production Gate.
+Nenhuma pontuação alta em `/api/contract/jundiai/readiness`, nenhum `14/14`, nenhum Evidence Pack, nenhum Dossiê íntegro, nenhum Kit de Contingência e nenhum browser E2E promovem automaticamente um Production Gate.
 
 A POC mede **demonstrabilidade, coerência técnica e integridade do estado apresentado**; os Production Gates medem **aptidão para operação real, supply chain, implantação e cumprimento de contrato**.
