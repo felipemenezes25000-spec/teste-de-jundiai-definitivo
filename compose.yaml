@@ -1,0 +1,31 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: jundiai
+      POSTGRES_USER: jundiai
+      POSTGRES_PASSWORD: ${JUNDIAI_POSTGRES_PASSWORD:?defina JUNDIAI_POSTGRES_PASSWORD no ambiente}
+    volumes:
+      - jundiai_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jundiai -d jundiai"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Jundiai: Host=db;Port=5432;Database=jundiai;Username=jundiai;Password=${JUNDIAI_POSTGRES_PASSWORD:?defina JUNDIAI_POSTGRES_PASSWORD no ambiente}
+      Jundiai__Persistence__AutoMigrate: "true"
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+volumes:
+  jundiai_pgdata:
