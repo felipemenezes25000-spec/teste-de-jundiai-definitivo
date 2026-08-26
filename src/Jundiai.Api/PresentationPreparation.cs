@@ -93,7 +93,12 @@ public sealed class PresentationPreparationStore(
         var blockers = contract.NonCodeBlockers();
         var integrationItems = integrations.All();
         var integrationGovernanceValid = integrationItems.All(x =>
-            x.Status is not ("homologated" or "production_enabled") || !string.IsNullOrWhiteSpace(x.EvidenceReference));
+        {
+            var elevatedStatus =
+                string.Equals(x.Status, "homologated", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(x.Status, "production_enabled", StringComparison.OrdinalIgnoreCase);
+            return !elevatedStatus || !string.IsNullOrWhiteSpace(x.EvidenceReference);
+        });
 
         var checks = new List<PresentationCheck>
         {
