@@ -5,6 +5,7 @@ public static class PlatformReadinessEndpoints
     public static IEndpointRouteBuilder MapPlatformReadinessEndpoints(this IEndpointRouteBuilder endpoints)
     {
         endpoints.MapGet("/api/contract/platform/readiness", () => Results.Ok(PlatformReadinessModel.Build()));
+        endpoints.MapGet("/api/platform/readiness", () => Results.Ok(PlatformReadinessModel.Build()));
         endpoints.MapGet("/api/contract/platform/architecture", () => Results.Ok(new
         {
             application = ".NET 8 ASP.NET Core modular monolith POC",
