@@ -46,7 +46,10 @@ public static class AuthSecurityEndpoints
         {
             passwordHash = "PBKDF2-SHA256",
             sessionTokens = "cryptographically-random-memory-session",
-            mfa = "TOTP-like demo challenge with fail-closed verification",
+            mfa = "demo challenge with fixed-time verification; production identity remains a Production Gate",
+            pocMode = store.PocMode,
+            mfaDefaultCodeEnabled = store.AllowDefaultDemoMfaCode,
+            mfaCodeSource = store.MfaCodeSource,
             lockout = new { attempts = DemoIdentityStore.MaxFailedAttempts, minutes = DemoIdentityStore.LockoutMinutes },
             rbac = "explicit-role-permission/default-deny",
             anonymousProtectedApi = "401-fail-closed",
@@ -64,7 +67,7 @@ public static class AuthSecurityEndpoints
                 sensitiveApiCacheControl = "pending-production-hardening"
             },
             seededUsers = store.DemoUsers().Count,
-            productionNote = "POC identity store only; production must use persistent identity provider, secret-backed MFA, audited token lifecycle, CSP/cache policy and final TLS/HSTS controls."
+            productionNote = "POC identity store only; production must disable demo defaults and use persistent identity provider, secret-backed MFA, audited token lifecycle, CSP/cache policy and final TLS/HSTS controls."
         }));
 
         return endpoints;
@@ -75,13 +78,17 @@ public sealed class DemoIdentityStore
 {
     public const int MaxFailedAttempts = 5;
     public const int LockoutMinutes = 10;
+    private const string DefaultPocMfaCode = "008026";
 
     private readonly ConcurrentDictionary<string, DemoUserAccount> _users = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, DemoSession> _sessions = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<Guid, PendingMfaChallenge> _challenges = new();
 
-    public DemoIdentityStore()
+    public DemoIdentityStore(IConfiguration configuration)
     {
+        PocMode = configuration.GetValue("Jundiai:PocMode", false);
+        AllowDefaultDemoMfaCode = PocMode && configuration.GetValue("Jundiai:DemoMfa:AllowDefaultCode", false);
+
         Add("admin.jundiai", "Admin POC Jundiaí", JundiaiRoles.PocAdmin, "Gestão Municipal", true, "Jundiai#008");
         Add("gestor.saude", "Gestor Municipal", JundiaiRoles.MunicipalManager, "Secretaria Municipal de Saúde", true, "Gestor#008");
         Add("regulador.central", "Regulador Central", JundiaiRoles.Regulator, "Central de Regulação", true, "Regula#008");
@@ -92,6 +99,12 @@ public sealed class DemoIdentityStore
         Add("acs.micro01", "ACS Ana Paula", JundiaiRoles.Acs, "USF Parque Centenário", false, "Acs#008");
         Add("auditoria.cijun", "Auditoria POC", JundiaiRoles.Auditor, "CIJUN", true, "Audita#008");
     }
+
+    public bool PocMode { get; }
+    public bool AllowDefaultDemoMfaCode { get; }
+    public string MfaCodeSource => !string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("JUNDIAI_DEMO_MFA_CODE"))
+        ? "environment"
+        : AllowDefaultDemoMfaCode ? "explicit-poc-default" : "unconfigured-fail-closed";
 
     public IReadOnlyList<object> DemoUsers() => _users.Values
         .OrderBy(x => x.Role)
@@ -139,7 +152,9 @@ public sealed class DemoIdentityStore
             var challenge = new PendingMfaChallenge(Guid.NewGuid(), user.UserName, DateTimeOffset.UtcNow.AddMinutes(5), false);
             _challenges[challenge.Id] = challenge;
             return new("mfa_required", null, challenge.Id, user.UserName, user.Role, false,
-                "Segundo fator obrigatório. Na POC, o código vem de JUNDIAI_DEMO_MFA_CODE (default 008026). Em produção não há código padrão.");
+                AllowDefaultDemoMfaCode
+                    ? "Segundo fator obrigatório. A POC permite o código demonstrativo configurado; JUNDIAI_DEMO_MFA_CODE tem precedência quando definido."
+                    : "Segundo fator obrigatório. Configure JUNDIAI_DEMO_MFA_CODE; sem código configurado a verificação falha fechada.");
         }
 
         return CreateSession(user, false);
@@ -151,7 +166,12 @@ public sealed class DemoIdentityStore
             return null;
         if (!_users.TryGetValue(challenge.UserName, out var user)) return null;
 
-        var expected = Environment.GetEnvironmentVariable("JUNDIAI_DEMO_MFA_CODE") ?? "008026";
+        var configured = Environment.GetEnvironmentVariable("JUNDIAI_DEMO_MFA_CODE");
+        var expected = !string.IsNullOrWhiteSpace(configured)
+            ? configured
+            : AllowDefaultDemoMfaCode ? DefaultPocMfaCode : null;
+        if (string.IsNullOrWhiteSpace(expected)) return null;
+
         if (!CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(request.Code ?? string.Empty), Encoding.UTF8.GetBytes(expected)))
             return null;
 
