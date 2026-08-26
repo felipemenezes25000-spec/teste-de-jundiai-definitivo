@@ -1,8 +1,6 @@
 name: ci
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -33,7 +31,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-
       - name: Validate frontend JavaScript
         run: |
           set -euo pipefail
@@ -60,36 +57,28 @@ jobs:
             src/Jundiai.Api/wwwroot/billing-v2.js; do
             node --check "$file"
           done
-
       - name: Validate smoke scripts
         run: |
           bash -n scripts/smoke.sh
           bash -n scripts/smoke-platform.sh
           bash -n scripts/smoke-postgres.sh
           bash -n scripts/smoke-wave4.sh
-
       - name: Public repository secret hygiene
         run: |
           if grep -R -n -E 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|AKIA[0-9A-Z]{16}' --exclude-dir=.git .; then
             echo 'Potential private key or AWS access key material found.'
             exit 1
           fi
-
       - name: Restore
         run: dotnet restore src/Jundiai.Api/Jundiai.Api.csproj
-
       - name: Build Release
         run: dotnet build src/Jundiai.Api/Jundiai.Api.csproj -c Release --no-restore
-
       - name: Smoke integrated POC
         run: bash scripts/smoke.sh
-
       - name: Smoke platform governance
         run: bash scripts/smoke-platform.sh
-
       - name: Smoke wave 4
         run: bash scripts/smoke-wave4.sh
-
       - name: Smoke PostgreSQL durability
         env:
           JUNDIAI_POSTGRES_PASSWORD: ci-jundiai-poc
