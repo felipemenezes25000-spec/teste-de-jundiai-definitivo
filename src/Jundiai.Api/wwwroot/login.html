@@ -25,6 +25,7 @@
     .users{margin-top:24px;border-top:1px solid #edf1f5;padding-top:18px}.user{display:flex;justify-content:space-between;gap:14px;padding:10px 0;border-bottom:1px dashed #e8edf3;font-size:13px}.user b{color:#203b5a}.user span{color:#697b8f;text-align:right}
     .note{font-size:12px;color:#7a8a9c;margin-top:18px;line-height:1.45}
     @media(max-width:850px){.auth-shell{grid-template-columns:1fr;padding:22px}.auth-hero{min-height:auto}h1{font-size:34px}}
+    @media(max-width:460px){.auth-shell{padding:12px}.auth-hero,.auth-card{padding:22px;border-radius:18px}.security-grid{grid-template-columns:1fr}h1{font-size:29px}.lead{font-size:16px}}
   </style>
 </head>
 <body>
@@ -55,10 +56,10 @@
 
       <div id="mfa" hidden>
         <label for="code">Segundo fator</label>
-        <input id="code" inputmode="numeric" value="008026" maxlength="8" />
+        <input id="code" inputmode="numeric" value="008026" maxlength="8" autocomplete="one-time-code" />
         <button id="verify">Validar MFA</button>
       </div>
-      <div class="message" id="message">Use uma das identidades demonstrativas abaixo.</div>
+      <div class="message" id="message" role="status" aria-live="polite">Use uma das identidades demonstrativas abaixo.</div>
       <button class="secondary" id="continue" hidden>Ir para o modo POC</button>
 
       <div class="users">
@@ -71,13 +72,17 @@
 <script>
 let challengeId = null;
 const message = document.getElementById('message');
+const nextParam = new URLSearchParams(location.search).get('next');
+const safeNext = nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//') && !nextParam.startsWith('/login') ? nextParam : '/poc.html';
 const show = (text, error=false) => { message.textContent=text; message.className='message'+(error?' error':''); };
 const saveSession = result => {
   localStorage.setItem('jundiai.session', result.sessionToken);
   localStorage.setItem('jundiai.role', result.role || 'poc_admin');
   localStorage.setItem('jundiai.user', result.userName || 'poc');
   show(`Autenticado como ${result.userName} · papel ${result.role} · MFA ${result.mfaVerified?'validado':'não exigido'}.`);
-  document.getElementById('continue').hidden=false;
+  const button=document.getElementById('continue');
+  button.textContent=safeNext==='/poc.html'?'Ir para o modo POC':'Voltar para a tela anterior';
+  button.hidden=false;
 };
 async function json(url, options={}) {
   const r=await fetch(url,{...options,headers:{'Content-Type':'application/json',...(options.headers||{})}});
@@ -95,14 +100,14 @@ document.getElementById('login').onclick=async()=>{
   try{
     const result=await json('/api/auth/login',{method:'POST',body:JSON.stringify({userName:username.value,password:password.value})});
     if(result.status==='mfa_required'){
-      challengeId=result.challengeId; document.getElementById('mfa').hidden=false; show(result.message);
+      challengeId=result.challengeId; document.getElementById('mfa').hidden=false; document.getElementById('code').focus(); show(result.message);
     }else saveSession(result);
   }catch(e){show(e.message,true)}
 };
 document.getElementById('verify').onclick=async()=>{
   try{saveSession(await json('/api/auth/mfa/verify',{method:'POST',body:JSON.stringify({challengeId,code:code.value})}));document.getElementById('mfa').hidden=true}catch(e){show(e.message,true)}
 };
-document.getElementById('continue').onclick=()=>location.href='/poc.html';
+document.getElementById('continue').onclick=()=>location.href=safeNext;
 loadUsers();
 </script>
 </body>
