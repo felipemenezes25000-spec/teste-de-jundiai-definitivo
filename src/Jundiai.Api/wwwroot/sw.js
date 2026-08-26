@@ -1,5 +1,5 @@
-const CACHE='jundiai-healthos-poc-v3';
-const ASSETS=['/','/index.html','/styles.css','/clinical.css','/app.js','/citizen.html','/operations.html','/esus.html','/acs.html','/manifest.webmanifest'];
+const CACHE='jundiai-healthos-poc-v4';
+const ASSETS=['/','/index.html','/styles.css','/clinical.css','/app.js','/citizen.html','/operations.html','/esus.html','/acs.html','/manifest.webmanifest','/login.html','/poc.html','/poc.css','/poc.js','/caretrace.html','/caretrace.js'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS))));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))));
 self.addEventListener('fetch',event=>{
