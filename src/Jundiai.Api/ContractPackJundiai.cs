@@ -22,14 +22,7 @@ public static class ContractPackJundiaiEndpoints
             EvidenceLedgerStore evidence) =>
             Results.Ok(store.Readiness(demo, operations, identities, masterData, scheduling, clinical, diagnostics, immunization, billing, inventory, pharmacy, telemedicine, evidence)));
         endpoints.MapGet("/api/contract/jundiai/evidence-map", (ContractPackJundiaiStore store) => Results.Ok(store.EvidenceMap()));
-        endpoints.MapGet("/api/contract/jundiai/non-code-blockers", () => Results.Ok(new[]
-        {
-            new { id = "HAB-AT-29", severity = "critical", owner = "habilitação", description = "Comprovar atestado(s) de capacidade técnica compatíveis com a exigência editalícia referente ao quantitativo de unidades de saúde. Não é resolvido por software." },
-            new { id = "EXT-CADSUS", severity = "external", owner = "integração", description = "Acesso/homologação CadSUS depende de autorização e credenciais oficiais." },
-            new { id = "EXT-RNDS", severity = "external", owner = "integração", description = "RNDS/SI-PNI e demais serviços nacionais dependem de credenciais, versões e homologações vigentes." },
-            new { id = "MIG-LEGACY", severity = "external", owner = "implantação", description = "Migração definitiva depende de acesso ao legado, dicionário de dados, volumes e critérios de aceite da CIJUN/município." },
-            new { id = "OPS-24X7", severity = "operational", owner = "operação", description = "SLA, suporte presencial/remoto e equipe dedicada exigem comprovação operacional além do código." }
-        }));
+        endpoints.MapGet("/api/contract/jundiai/non-code-blockers", (ContractPackJundiaiStore store) => Results.Ok(store.NonCodeBlockers()));
         return endpoints;
     }
 }
@@ -37,6 +30,7 @@ public static class ContractPackJundiaiEndpoints
 public sealed class ContractPackJundiaiStore
 {
     private readonly IReadOnlyList<JundiaiPocBlock> _blocks;
+    private readonly IReadOnlyList<JundiaiNonCodeBlocker> _nonCodeBlockers;
 
     public ContractPackJundiaiStore()
     {
@@ -55,14 +49,26 @@ public sealed class ContractPackJundiaiStore
             Block(11, "Farmácia, materiais e almoxarifado", "inventory", "/pharmacy-care.html", ["estoque", "lote", "validade", "inventário", "recall", "controlados", "conciliação medicamentosa", "ordem ativa", "dispensação vinculada", "orientação farmacêutica"], ["/api/inventory/v2/readiness", "/api/pharmacy/v2/readiness", "/api/warehouse"]),
             Block(12, "ACS móvel/offline", "acs", "/acs.html", ["captura offline", "fila local", "sincronização", "visita territorial"], ["/api/psf/acs/visits", "/api/psf/acs/sync"]),
             Block(13, "Cidadão digital e telemedicina", "citizen-telemedicine", "/telemedicine.html", ["porta digital", "red flags", "consentimento", "handoff", "sala de espera", "preflight", "participantes", "teleconsulta", "resumo clínico"], ["/api/citizen/intelligent-access/evaluate", "/api/telemedicine/readiness", "/api/telemedicine/sessions"]),
-            Block(14, "Indicadores, gestão e evidências", "analytics", "/command-center.html", ["Command Center", "alertas operacionais", "dashboard", "readiness", "auditoria", "evidência", "mapa de aderência", "telemetria", "runner dos 14 blocos", "Production Gates"], ["/api/analytics/command-center", "/api/poc/verification/latest", "/api/contract/jundiai/readiness", "/api/evidence/verify"])
+            Block(14, "Indicadores, gestão e evidências", "analytics", "/command-center.html", ["Command Center", "alertas operacionais", "dashboard", "readiness", "auditoria", "evidência", "mapa de aderência", "telemetria", "runner dos 14 blocos", "Production Gates", "Evidence Pack verificável"], ["/api/analytics/command-center", "/api/poc/verification/latest", "/api/contract/jundiai/readiness", "/api/evidence/verify", "/api/poc/evidence-pack/latest/verify"])
+        ];
+
+        _nonCodeBlockers =
+        [
+            new("HAB-AT-29", "critical", "habilitação", "Comprovar atestado(s) de capacidade técnica compatíveis com a exigência editalícia referente ao quantitativo de unidades de saúde. Não é resolvido por software."),
+            new("EXT-CADSUS", "external", "integração", "Acesso/homologação CadSUS depende de autorização e credenciais oficiais."),
+            new("EXT-RNDS", "external", "integração", "RNDS/SI-PNI e demais serviços nacionais dependem de credenciais, versões e homologações vigentes."),
+            new("MIG-LEGACY", "external", "implantação", "Migração definitiva depende de acesso ao legado, dicionário de dados, volumes e critérios de aceite da CIJUN/município."),
+            new("OPS-24X7", "operational", "operação", "SLA, suporte presencial/remoto e equipe dedicada exigem comprovação operacional além do código.")
         ];
     }
+
+    public IReadOnlyList<JundiaiPocBlock> Blocks() => _blocks;
+    public IReadOnlyList<JundiaiNonCodeBlocker> NonCodeBlockers() => _nonCodeBlockers;
 
     public object Definition() => new
     {
         contractPack = "JUNDIAI-RCE-008-2026-POC",
-        version = "2026.08.26-wave4",
+        version = "2026.08.26-evidence-pack",
         purpose = "Implementação demonstrativa orientada aos blocos de POC. Não substitui a leitura jurídica/técnica do edital e anexos vigentes.",
         blocks = _blocks,
         semantics = new
@@ -104,15 +110,15 @@ public sealed class ContractPackJundiaiStore
             State(11, inventory.Lots().Count > 0 && demo.Inventory().Count > 0 ? "implemented_poc" : "partial", 95, $"Lote/validade, inventário, recall/controlados, conciliação farmacêutica e {pharmacy.Dispensations(null).Count} dispensação(ões) vinculada(s) nesta instância."),
             State(12, demo.Households().Count > 0 ? "implemented_poc" : "partial", 92, "PWA ACS com persistência local no navegador e sincronização posterior."),
             State(13, "implemented_poc", 94, $"Porta Digital, kernel determinístico e sala de telemedicina operável; {telemedicine.Sessions().Count} sessão(ões) na instância."),
-            State(14, evidence.Verify().Valid ? "implemented_poc" : "partial", 97, "Command Center, alertas, Contract Pack, runner dos 14 blocos, Evidence Ledger, telemetria, governança e Production Gates explícitos.")
+            State(14, evidence.Verify().Valid ? "implemented_poc" : "partial", 97, "Command Center, alertas, Contract Pack, runner dos 14 blocos, Evidence Ledger, telemetria, governança, Production Gates e Evidence Pack verificável.")
         };
         var weighted = (int)Math.Round(states.Average(x => x.Score));
         return new JundiaiContractReadiness("JUNDIAI-RCE-008-2026-POC", DateTimeOffset.UtcNow, weighted, states,
         [
             "Atestado(s) de capacidade técnica / quantitativo de unidades: validar habilitação documental em paralelo.",
             "CadSUS, RNDS/SI-PNI, BNAFAR/Hórus, PACS/LIS e outros terceiros: integração/homologação externa não deve ser falsamente declarada como concluída.",
-            "PostgreSQL, migration, checkpoint/outbox e tenant scope possuem fundação implementada; ainda falta migrar todos os stores de domínio e executar hardening/DR/segurança de produção.",
-            "IdP corporativo, observabilidade centralizada, backup/PITR, DR e migração real do legado continuam gates de industrialização/implantação."
+            "PostgreSQL, migrations, checkpoint completo, recovery drill, inbox/outbox, idempotência, retry/dead-letter e tenant scope possuem fundação implementada; ainda falta migrar todos os stores de domínio e executar hardening/DR/segurança de produção.",
+            "IdP corporativo, backup/PITR gerenciado, failover/DR, workers/broker de integração e migração real do legado continuam gates de industrialização/implantação."
         ]);
     }
 
@@ -137,5 +143,6 @@ public sealed class ContractPackJundiaiStore
 }
 
 public sealed record JundiaiPocBlock(int Number, string Name, string Slug, string UiRoute, IReadOnlyList<string> Capabilities, IReadOnlyList<string> EvidenceEndpoints);
+public sealed record JundiaiNonCodeBlocker(string Id, string Severity, string Owner, string Description);
 public sealed record JundiaiBlockReadiness(int Block, string Status, int Score, string Evidence);
 public sealed record JundiaiContractReadiness(string ContractPack, DateTimeOffset GeneratedAt, int OverallScore, IReadOnlyList<JundiaiBlockReadiness> Blocks, IReadOnlyList<string> CriticalNotes);
