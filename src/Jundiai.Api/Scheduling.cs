@@ -11,12 +11,28 @@ public static class SchedulingEndpoints
             Results.Ok(store.Slots(specialty, unit, date)));
         endpoints.MapGet("/api/scheduling/quotas", (SchedulingStore store) => Results.Ok(store.Quotas()));
         endpoints.MapGet("/api/scheduling/waitlist", (SchedulingStore store) => Results.Ok(store.Waitlist()));
+        endpoints.MapGet("/api/scheduling/bookings", (SchedulingStore store) => Results.Ok(store.Bookings()));
+        endpoints.MapGet("/api/scheduling/loss-report", (SchedulingStore store) => Results.Ok(store.LossReport()));
 
         endpoints.MapPost("/api/scheduling/book", (BookSlotRequest request, SchedulingStore store, DemoStore demo) =>
         {
             var booking = store.Book(request);
             demo.AuditExternal("scheduler", "scheduling.book", $"booking:{booking.Id}", $"slot={booking.SlotId};citizen={booking.CitizenId}");
             return Results.Created($"/api/scheduling/bookings/{booking.Id}", booking);
+        });
+
+        endpoints.MapPost("/api/scheduling/bookings/{bookingId:guid}/transition", (Guid bookingId, BookingTransitionRequest request, SchedulingStore store, DemoStore demo) =>
+        {
+            var booking = store.TransitionBooking(bookingId, request);
+            demo.AuditExternal(request.Actor ?? "scheduler", "scheduling.booking.transition", $"booking:{bookingId}", $"status={booking.Status};reason={request.Reason}");
+            return Results.Ok(booking);
+        });
+
+        endpoints.MapPost("/api/scheduling/bookings/{bookingId:guid}/reschedule", (Guid bookingId, RescheduleBookingRequest request, SchedulingStore store, DemoStore demo) =>
+        {
+            var booking = store.Reschedule(bookingId, request);
+            demo.AuditExternal(request.Actor ?? "scheduler", "scheduling.booking.reschedule", $"booking:{bookingId}", $"slot={booking.SlotId};reason={request.Reason}");
+            return Results.Ok(booking);
         });
 
         endpoints.MapPost("/api/scheduling/waitlist", (CreateWaitlistRequest request, SchedulingStore store) =>
@@ -36,7 +52,12 @@ public static class SchedulingEndpoints
             gridCount = store.Grids().Count,
             slotCount = store.Slots(null, null, null).Count,
             quotaCount = store.Quotas().Count,
-            capabilities = new[] { "centralized-grids", "unit-specialty-slots", "quotas", "blocked-slots", "overbooking-control", "waitlist", "priority-promotion" }
+            bookingCount = store.Bookings().Count,
+            capabilities = new[]
+            {
+                "centralized-grids", "unit-specialty-slots", "quotas", "blocked-slots", "overbooking-control",
+                "waitlist", "priority-promotion", "booking-lifecycle", "reschedule", "no-show", "cancellation", "loss-and-occupancy-report"
+            }
         }));
 
         return endpoints;
@@ -70,6 +91,7 @@ public sealed class SchedulingStore
     public IReadOnlyList<ScheduleGrid> Grids() => _grids.Values.OrderBy(x => x.Specialty).ToList();
     public IReadOnlyList<ScheduleQuota> Quotas() => _quotas.Values.OrderBy(x => x.Specialty).ToList();
     public IReadOnlyList<WaitlistEntry> Waitlist() => _waitlist.Values.OrderByDescending(x => PriorityRank(x.Priority)).ThenBy(x => x.CreatedAt).ToList();
+    public IReadOnlyList<ScheduleBooking> Bookings() => _bookings.Values.OrderByDescending(x => x.StartsAt).ToList();
 
     public IReadOnlyList<ScheduleSlot> Slots(string? specialty, string? unit, DateOnly? date) => _slots.Values
         .Where(x => string.IsNullOrWhiteSpace(specialty) || x.Specialty.Contains(specialty, StringComparison.OrdinalIgnoreCase))
@@ -81,15 +103,71 @@ public sealed class SchedulingStore
     public ScheduleBooking Book(BookSlotRequest request)
     {
         if (!_slots.TryGetValue(request.SlotId, out var slot)) throw new KeyNotFoundException();
-        lock (slot)
-        {
-            if (slot.Blocked) throw new InvalidOperationException("Horário bloqueado pela unidade.");
-            if (slot.Booked >= slot.Capacity) throw new InvalidOperationException("Horário sem capacidade disponível.");
-            slot.Booked++;
-        }
-        var booking = new ScheduleBooking(Guid.NewGuid(), request.SlotId, request.CitizenId, request.CitizenName.Trim(), slot.Specialty, slot.Unit, slot.Start, request.Priority?.Trim() ?? "routine", "scheduled", request.Source?.Trim() ?? "regulation", DateTimeOffset.UtcNow);
+        Reserve(slot);
+        var now = DateTimeOffset.UtcNow;
+        var booking = new ScheduleBooking(
+            Guid.NewGuid(), request.SlotId, request.CitizenId, request.CitizenName.Trim(), slot.Specialty, slot.Unit, slot.Start,
+            request.Priority?.Trim() ?? "routine", "scheduled", request.Source?.Trim() ?? "regulation", now, now, null, null, null);
         _bookings[booking.Id] = booking;
         return booking;
+    }
+
+    public ScheduleBooking TransitionBooking(Guid bookingId, BookingTransitionRequest request)
+    {
+        if (!_bookings.TryGetValue(bookingId, out var current)) throw new KeyNotFoundException();
+        var target = (request.Status ?? string.Empty).Trim().ToLowerInvariant();
+        var allowed = current.Status switch
+        {
+            "scheduled" => new[] { "checked_in", "completed", "cancelled", "no_show" },
+            "checked_in" => new[] { "completed", "cancelled" },
+            _ => Array.Empty<string>()
+        };
+        if (!allowed.Contains(target)) throw new InvalidOperationException($"Transição de agenda inválida: {current.Status} → {target}.");
+        if (target == "cancelled" && string.IsNullOrWhiteSpace(request.Reason)) throw new ArgumentException("Cancelamento exige motivo.");
+
+        if (target == "cancelled" && _slots.TryGetValue(current.SlotId, out var slot)) Release(slot);
+        var updated = current with
+        {
+            Status = target,
+            UpdatedAt = DateTimeOffset.UtcNow,
+            ClosureReason = request.Reason?.Trim(),
+            ClosedBy = request.Actor?.Trim()
+        };
+        _bookings[bookingId] = updated;
+        return updated;
+    }
+
+    public ScheduleBooking Reschedule(Guid bookingId, RescheduleBookingRequest request)
+    {
+        if (!_bookings.TryGetValue(bookingId, out var current)) throw new KeyNotFoundException();
+        if (current.Status != "scheduled") throw new InvalidOperationException("Somente agendamento ativo pode ser remarcado.");
+        if (current.SlotId == request.NewSlotId) return current;
+        if (!_slots.TryGetValue(request.NewSlotId, out var target)) throw new KeyNotFoundException();
+        if (!_slots.TryGetValue(current.SlotId, out var origin)) throw new InvalidOperationException("Slot original não encontrado.");
+
+        Reserve(target);
+        try
+        {
+            Release(origin);
+            var updated = current with
+            {
+                SlotId = target.Id,
+                Specialty = target.Specialty,
+                Unit = target.Unit,
+                StartsAt = target.Start,
+                UpdatedAt = DateTimeOffset.UtcNow,
+                RescheduledFromSlotId = origin.Id,
+                ClosureReason = request.Reason?.Trim(),
+                ClosedBy = request.Actor?.Trim()
+            };
+            _bookings[bookingId] = updated;
+            return updated;
+        }
+        catch
+        {
+            Release(target);
+            throw;
+        }
     }
 
     public WaitlistEntry Enqueue(CreateWaitlistRequest request)
@@ -124,10 +202,61 @@ public sealed class SchedulingStore
     public WaitlistEntry Promote(Guid entryId, PromoteWaitlistRequest request)
     {
         if (!_waitlist.TryGetValue(entryId, out var entry)) throw new KeyNotFoundException();
+        if (entry.Status != "waiting") throw new InvalidOperationException("Entrada da fila já foi processada.");
         var booking = Book(new BookSlotRequest(request.SlotId, entry.CitizenId, entry.CitizenName, entry.Priority, "waitlist"));
         var updated = entry with { Status = "promoted", BookingId = booking.Id, PromotedAt = DateTimeOffset.UtcNow };
         _waitlist[entryId] = updated;
         return updated;
+    }
+
+    public object LossReport()
+    {
+        var bookings = Bookings();
+        var slots = _slots.Values.ToList();
+        var bySpecialty = slots.GroupBy(x => x.Specialty).OrderBy(x => x.Key).Select(group =>
+        {
+            var specialtyBookings = bookings.Where(x => x.Specialty == group.Key).ToList();
+            var capacity = group.Sum(x => x.Capacity);
+            var occupied = specialtyBookings.Count(x => x.Status is "scheduled" or "checked_in" or "completed" or "no_show");
+            return new
+            {
+                specialty = group.Key,
+                slots = group.Count(),
+                capacity,
+                occupied,
+                scheduled = specialtyBookings.Count(x => x.Status == "scheduled"),
+                completed = specialtyBookings.Count(x => x.Status == "completed"),
+                noShow = specialtyBookings.Count(x => x.Status == "no_show"),
+                cancelled = specialtyBookings.Count(x => x.Status == "cancelled"),
+                occupancyPercent = capacity == 0 ? 0 : Math.Round((double)occupied / capacity * 100, 2)
+            };
+        }).ToArray();
+        return new
+        {
+            bookings = bookings.Count,
+            scheduled = bookings.Count(x => x.Status == "scheduled"),
+            checkedIn = bookings.Count(x => x.Status == "checked_in"),
+            completed = bookings.Count(x => x.Status == "completed"),
+            noShow = bookings.Count(x => x.Status == "no_show"),
+            cancelled = bookings.Count(x => x.Status == "cancelled"),
+            bySpecialty,
+            generatedAt = DateTimeOffset.UtcNow
+        };
+    }
+
+    private static void Reserve(ScheduleSlot slot)
+    {
+        lock (slot)
+        {
+            if (slot.Blocked) throw new InvalidOperationException("Horário bloqueado pela unidade.");
+            if (slot.Booked >= slot.Capacity) throw new InvalidOperationException("Horário sem capacidade disponível.");
+            slot.Booked++;
+        }
+    }
+
+    private static void Release(ScheduleSlot slot)
+    {
+        lock (slot) slot.Booked = Math.Max(0, slot.Booked - 1);
     }
 
     private void SeedGrid(string specialty, string unit, DayOfWeek day, TimeOnly starts, TimeOnly ends, int minutes, int overbook)
@@ -158,12 +287,26 @@ public sealed class SchedulingStore
 public sealed record ScheduleGrid(Guid Id, string Specialty, string Unit, DayOfWeek DayOfWeek, TimeOnly StartsAt, TimeOnly EndsAt, int DurationMinutes, int OverbookCapacity, bool Active);
 public sealed class ScheduleSlot(Guid id, Guid gridId, string specialty, string unit, DateTimeOffset start, DateTimeOffset end, int capacity, int booked, bool blocked, string? blockReason)
 {
-    public Guid Id { get; } = id; public Guid GridId { get; } = gridId; public string Specialty { get; } = specialty; public string Unit { get; } = unit; public DateTimeOffset Start { get; } = start; public DateTimeOffset End { get; } = end; public int Capacity { get; } = capacity; public int Booked { get; set; } = booked; public bool Blocked { get; set; } = blocked; public string? BlockReason { get; set; } = blockReason;
+    public Guid Id { get; } = id;
+    public Guid GridId { get; } = gridId;
+    public string Specialty { get; } = specialty;
+    public string Unit { get; } = unit;
+    public DateTimeOffset Start { get; } = start;
+    public DateTimeOffset End { get; } = end;
+    public int Capacity { get; } = capacity;
+    public int Booked { get; set; } = booked;
+    public bool Blocked { get; set; } = blocked;
+    public string? BlockReason { get; set; } = blockReason;
 }
 public sealed record ScheduleQuota(Guid Id, string Specialty, string Unit, string Scope, int RegulationPercent, int UnitPercent, int ReservePercent, DateTimeOffset UpdatedAt);
-public sealed record ScheduleBooking(Guid Id, Guid SlotId, Guid CitizenId, string CitizenName, string Specialty, string Unit, DateTimeOffset StartsAt, string Priority, string Status, string Source, DateTimeOffset CreatedAt);
+public sealed record ScheduleBooking(
+    Guid Id, Guid SlotId, Guid CitizenId, string CitizenName, string Specialty, string Unit, DateTimeOffset StartsAt,
+    string Priority, string Status, string Source, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt,
+    Guid? RescheduledFromSlotId, string? ClosureReason, string? ClosedBy);
 public sealed record WaitlistEntry(Guid Id, Guid CitizenId, string CitizenName, string Specialty, string? PreferredUnit, string Priority, string RequestedBy, string Status, Guid? BookingId, DateTimeOffset CreatedAt, DateTimeOffset? PromotedAt);
 public sealed record BookSlotRequest(Guid SlotId, Guid CitizenId, string CitizenName, string? Priority, string? Source);
+public sealed record BookingTransitionRequest(string Status, string? Reason, string? Actor);
+public sealed record RescheduleBookingRequest(Guid NewSlotId, string? Reason, string? Actor);
 public sealed record CreateWaitlistRequest(Guid CitizenId, string CitizenName, string Specialty, string? PreferredUnit, string? Priority, string? RequestedBy);
 public sealed record BlockSlotRequest(bool Blocked, string? Reason);
 public sealed record AdjustQuotaRequest(int RegulationPercent, int UnitPercent, int ReservePercent);
