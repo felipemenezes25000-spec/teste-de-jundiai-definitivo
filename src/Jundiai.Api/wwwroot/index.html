@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#ffffff" />
+  <title>Jundiaí HealthOS · RCE 008/2026</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">J+</div>
+        <div><strong>Jundiaí HealthOS</strong><span>RCE 008/2026 · POC</span></div>
+      </div>
+      <nav id="nav">
+        <button data-view="overview" class="active">Visão geral</button>
+        <button data-view="regulation">Regulação</button>
+        <button data-view="billing">Faturamento SUS</button>
+        <button data-view="immunization">Imunização</button>
+        <button data-view="pharmacy">Farmácia & Estoque</button>
+        <button data-view="psf">PSF & Território</button>
+        <button data-view="dental">Odontologia</button>
+        <button data-view="diagnostics">Exames</button>
+        <button data-view="audit">Auditoria</button>
+      </nav>
+      <a class="acs-link" href="/acs.html">Abrir app ACS offline →</a>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Demonstração integrada</p>
+          <h1 id="view-title">Centro de comando municipal</h1>
+        </div>
+        <div class="status"><span></span> ambiente POC</div>
+      </header>
+
+      <section id="content" aria-live="polite">
+        <div class="loading">Carregando dados da POC…</div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+  <script src="/app.js" defer></script>
+</body>
+</html>

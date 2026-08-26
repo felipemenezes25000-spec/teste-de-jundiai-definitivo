@@ -1,0 +1,9 @@
+{
+  "name": "Jundiaí HealthOS ACS Campo",
+  "short_name": "ACS Jundiaí",
+  "start_url": "/acs.html",
+  "display": "standalone",
+  "background_color": "#edf4f2",
+  "theme_color": "#176b5b",
+  "icons": []
+}
