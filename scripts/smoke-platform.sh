@@ -56,7 +56,13 @@ curl -fsS "${AUTH[@]}" "$BASE_URL/api/poc/evidence-pack/latest/manifest" | asser
 curl -fsS "${AUTH[@]}" "$BASE_URL/api/poc/evidence-pack/latest/verify" | assert_json 'd["packageHashValid"] is True and d["ledgerChainValid"] is True and d["demonstrationIntegrityReady"] is True and d["passedBlocks"]==14'
 curl -fsS "${AUTH[@]}" "$BASE_URL/api/poc/evidence-pack/latest/export" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["payload"]["packId"]==sys.argv[1] and len(d["packageSha256"])==64' "$PACK_ID"
 
-# Evidence Ledger recebeu controles de privacidade, runner e geração do pacote.
-curl -fsS "${AUTH[@]}" "$BASE_URL/api/evidence/ledger" | assert_json 'any(x["action"]=="privacy.break-glass.open" for x in d) and any(x["action"]=="privacy.subject-export.generate" for x in d) and any(x["action"]=="poc.run.complete" for x in d) and any(x["action"]=="poc.evidence-pack.generate" for x in d)'
+# Preflight da banca: cenário ouro + runner + Evidence Pack + assets + ledger + integrações + blocker documental.
+PRESENTATION=$(curl -fsS -X POST "${AUTH[@]}" "$BASE_URL/api/poc/presentation/prepare" -H 'Content-Type: application/json' -d '{"actor":"smoke.presentation"}')
+PRESENTATION_ID=$(python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["ready"] is True and d["status"]=="ready"; assert d["passedBlocks"]==14 and d["totalBlocks"]==14; assert len(d["checks"])==8 and all(x["passed"] for x in d["checks"]); assert len(d["pages"])==22 and all(x["exists"] and x["bytes"]>0 for x in d["pages"]); assert len(d["assets"])==10 and all(x["exists"] and x["bytes"]>0 for x in d["assets"]); assert len(d["evidencePackSha256"])==64; assert d["persistenceMode"]=="poc-memory-fallback"; assert any(x["id"]=="HAB-AT-29" for x in d["nonCodeBlockers"]); print(d["id"])' <<<"$PRESENTATION")
+curl -fsS "${AUTH[@]}" "$BASE_URL/api/poc/presentation/latest" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["id"]==sys.argv[1] and d["ready"] is True and d["passedBlocks"]==14' "$PRESENTATION_ID"
+curl -fsS "${AUTH[@]}" "$BASE_URL/api/poc/presentation/checklist" | assert_json 'len(d["pages"])==22 and all(x["exists"] for x in d["pages"]) and len(d["assets"])==10 and all(x["exists"] for x in d["assets"])'
 
-echo "Smoke plataforma + Evidence Pack OK"
+# Evidence Ledger recebeu controles de privacidade, runner, pacote e preflight de apresentação.
+curl -fsS "${AUTH[@]}" "$BASE_URL/api/evidence/ledger" | assert_json 'any(x["action"]=="privacy.break-glass.open" for x in d) and any(x["action"]=="privacy.subject-export.generate" for x in d) and any(x["action"]=="poc.run.complete" for x in d) and any(x["action"]=="poc.evidence-pack.generate" for x in d) and any(x["action"]=="poc.presentation.prepare" for x in d)'
+
+echo "Smoke plataforma + Evidence Pack + apresentação READY OK"
