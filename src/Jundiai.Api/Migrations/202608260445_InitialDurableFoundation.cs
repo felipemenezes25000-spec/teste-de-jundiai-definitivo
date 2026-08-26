@@ -1,3 +1,4 @@
+using Jundiai.Api;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
