@@ -39,6 +39,6 @@ python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["id"]==sys.argv[1]
 
 PROCESSED=$(curl -fsS -X POST "${AUTH[@]}" "$BASE_URL/api/audit/persistence/outbox/$OUTBOX_ID/processed" -H 'Content-Type: application/json' -d '{}')
 python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["status"]=="processed" and d["processedAt"]' <<<"$PROCESSED"
-curl -fsS "${AUTH[@]}" "$BASE_URL/api/audit/persistence/outbox" | assert_json 'any(x["id"]==sys.argv[1] if False else x["status"]=="processed" for x in d)'
+curl -fsS "${AUTH[@]}" "$BASE_URL/api/audit/persistence/outbox" | assert_json 'any(x["status"]=="processed" for x in d)'
 
 echo "Smoke PostgreSQL OK"
