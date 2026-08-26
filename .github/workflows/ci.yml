@@ -59,6 +59,7 @@ jobs:
             src/Jundiai.Api/wwwroot/governance-privacy.js \
             src/Jundiai.Api/wwwroot/billing-v2.js \
             tests/e2e/presentation.spec.mjs \
+            tests/e2e/governance-supply.spec.mjs \
             playwright.config.mjs; do
             node --check "$file"
           done
