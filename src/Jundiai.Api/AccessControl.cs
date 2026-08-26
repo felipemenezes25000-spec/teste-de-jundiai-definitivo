@@ -14,6 +14,7 @@ public static class JundiaiRoles
     public const string Dentist = "dentist";
     public const string Acs = "acs";
     public const string Support = "support";
+    public const string Anonymous = "anonymous";
 }
 
 public static class JundiaiPermissions
@@ -178,6 +179,9 @@ public sealed class DemoAccessControlMiddleware(RequestDelegate next)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
+    public static bool DemoRoleHeaderEnabled =>
+        string.Equals(Environment.GetEnvironmentVariable("JUNDIAI_ALLOW_DEMO_ROLE_HEADER"), "true", StringComparison.OrdinalIgnoreCase);
+
     public async Task InvokeAsync(HttpContext context)
     {
         if (!context.Request.Path.StartsWithSegments("/api") ||
@@ -189,17 +193,25 @@ public sealed class DemoAccessControlMiddleware(RequestDelegate next)
             return;
         }
 
+        var role = ResolveRole(context);
+        var identity = DemoAuthenticationMiddleware.GetIdentity(context);
+
+        if (string.Equals(role, JundiaiRoles.Anonymous, StringComparison.OrdinalIgnoreCase))
+        {
+            await Unauthorized(context, "Autenticação necessária", "A rota protegida exige uma sessão POC válida. Cabeçalhos de papel demonstrativo ficam desabilitados por padrão.");
+            return;
+        }
+
         if (context.Request.Path.StartsWithSegments("/api/access/context"))
         {
-            var roleContext = ResolveRole(context);
-            var identity = DemoAuthenticationMiddleware.GetIdentity(context);
             context.Response.ContentType = "application/json";
             await context.Response.WriteAsync(JsonSerializer.Serialize(new
             {
-                role = roleContext,
+                role,
                 authenticated = identity is not null,
                 identity = identity?.UserName,
-                permissions = JundiaiPermissionCatalog.Snapshot().TryGetValue(roleContext, out var permissions)
+                demoRoleHeaderEnabled = DemoRoleHeaderEnabled,
+                permissions = JundiaiPermissionCatalog.Snapshot().TryGetValue(role, out var permissions)
                     ? permissions.OrderBy(x => x).ToArray()
                     : Array.Empty<string>()
             }, Json));
@@ -207,7 +219,6 @@ public sealed class DemoAccessControlMiddleware(RequestDelegate next)
         }
 
         var required = ResolveRequiredPermission(context.Request);
-        var role = ResolveRole(context);
         if (required is null)
         {
             await Deny(context, "Endpoint sem política de acesso", $"A rota '{context.Request.Path}' não possui política explícita e foi bloqueada por padrão.", null, role);
@@ -228,8 +239,29 @@ public sealed class DemoAccessControlMiddleware(RequestDelegate next)
     {
         if (context.Items["jundiai.auth.role"] is string authenticatedRole && !string.IsNullOrWhiteSpace(authenticatedRole))
             return authenticatedRole;
-        var role = context.Request.Headers["X-Demo-Role"].FirstOrDefault();
-        return string.IsNullOrWhiteSpace(role) ? JundiaiRoles.PocAdmin : role.Trim();
+
+        if (DemoRoleHeaderEnabled)
+        {
+            var headerRole = context.Request.Headers["X-Demo-Role"].FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(headerRole)) return headerRole.Trim();
+        }
+
+        return JundiaiRoles.Anonymous;
+    }
+
+    private static async Task Unauthorized(HttpContext context, string title, string detail)
+    {
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        context.Response.ContentType = "application/problem+json";
+        context.Response.Headers.WWWAuthenticate = "Bearer realm=\"Jundiai HealthOS POC\"";
+        await context.Response.WriteAsync(JsonSerializer.Serialize(new
+        {
+            type = "https://jundiai-healthos.local/problems/unauthorized",
+            title,
+            status = 401,
+            detail,
+            role = JundiaiRoles.Anonymous
+        }, Json));
     }
 
     private static async Task Deny(HttpContext context, string title, string detail, string? requiredPermission, string role)
