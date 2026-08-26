@@ -15,10 +15,15 @@ public static class PopulationAnalyticsEndpoints
             OperationalReadinessStore ops) => Results.Ok(PopulationAnalytics.BuildExecutive(demo, operations, scheduling, diagnostics, inventory, telemedicine, billing, ops)));
         endpoints.MapGet("/api/analytics/regulation", (DemoStore demo, SchedulingStore scheduling) => Results.Ok(PopulationAnalytics.BuildRegulation(demo, scheduling)));
         endpoints.MapGet("/api/analytics/supply", (DemoStore demo, InventoryAdvancedStore inventory) => Results.Ok(PopulationAnalytics.BuildSupply(demo, inventory)));
-        endpoints.MapGet("/api/analytics/clinical-safety", (DemoStore demo, DiagnosticsAdvancedStore diagnostics, TelemedicineStore telemedicine) => Results.Ok(PopulationAnalytics.BuildClinicalSafety(demo, diagnostics, telemedicine)));
+        endpoints.MapGet("/api/analytics/clinical-safety", (
+            DemoStore demo,
+            SchedulingStore scheduling,
+            DiagnosticsAdvancedStore diagnostics,
+            TelemedicineStore telemedicine,
+            ClinicalOrderStore clinicalOrders) => Results.Ok(PopulationAnalytics.BuildClinicalSafety(demo, scheduling, diagnostics, telemedicine, clinicalOrders)));
         endpoints.MapGet("/api/analytics/readiness", () => Results.Ok(new
         {
-            implemented = new[] { "executive-snapshot", "regulation-aging", "waitlist", "supply-risk", "critical-results", "care-continuity-gaps", "telemedicine-state", "service-desk-SLA" },
+            implemented = new[] { "executive-snapshot", "regulation-aging", "waitlist", "supply-risk", "critical-results", "care-continuity-gaps", "telemedicine-state", "clinical-orders", "service-desk-SLA" },
             note = "Indicadores são calculados sobre os dados desta instância POC; séries históricas reais exigem persistência e carga municipal."
         }));
         return endpoints;
@@ -113,10 +118,15 @@ public static class PopulationAnalytics
         };
     }
 
-    public static object BuildClinicalSafety(DemoStore demo, DiagnosticsAdvancedStore diagnostics, TelemedicineStore telemedicine)
+    public static object BuildClinicalSafety(
+        DemoStore demo,
+        SchedulingStore scheduling,
+        DiagnosticsAdvancedStore diagnostics,
+        TelemedicineStore telemedicine,
+        ClinicalOrderStore clinicalOrders)
     {
         var critical = diagnostics.Orders(null).Where(x => x.Result?.Critical == true).ToList();
-        var continuity = demo.Citizens().Select(c => CareTraceBuilder.Continuity(c, demo, diagnostics, telemedicine)).ToList();
+        var continuity = demo.Citizens().Select(c => CareTraceBuilder.Continuity(c, demo, scheduling, diagnostics, telemedicine, clinicalOrders)).ToList();
         var gaps = continuity.SelectMany(x => x.Gaps.Select(g => new { citizenId = x.CitizenId, g.Domain, g.SourceId, g.Severity, g.Description, g.SuggestedOperationalAction })).ToList();
         return new
         {
