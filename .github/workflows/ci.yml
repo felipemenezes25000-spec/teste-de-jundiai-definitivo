@@ -61,6 +61,7 @@ jobs:
             src/Jundiai.Api/wwwroot/billing-v2.js \
             tests/e2e/presentation.spec.mjs \
             tests/e2e/governance-supply.spec.mjs \
+            tests/e2e/frontend-hardening.spec.mjs \
             playwright.config.mjs; do
             node --check "$file"
           done
@@ -100,7 +101,7 @@ jobs:
         run: |
           npm install --no-audit --no-fund
           npx playwright install --with-deps chromium
-      - name: Browser E2E presentation flow
+      - name: Browser E2E presentation and hardening flow
         run: npm run test:e2e
       - name: Upload browser failure evidence
         if: failure()
