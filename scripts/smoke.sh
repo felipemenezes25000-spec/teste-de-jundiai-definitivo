@@ -21,11 +21,16 @@ assert_json() {
 }
 
 curl -fsS "$BASE_URL/api/health" | grep -q 'RCE 008/2026'
-for page in / /citizen.html /operations.html /esus.html /acs.html /login.html /poc.html /caretrace.html; do
+for page in / /citizen.html /operations.html /esus.html /acs.html /login.html /poc.html /caretrace.html /agenda.html /diagnostics.html /dental-v2.html /billing-v2.html /governance.html; do
   curl -fsS "$BASE_URL$page" >/dev/null
 done
 curl -fsS "$BASE_URL/poc.html" | grep -q '14 blocos'
 curl -fsS "$BASE_URL/caretrace.html" | grep -q 'CareTrace'
+curl -fsS "$BASE_URL/agenda.html" | grep -q 'Agenda'
+curl -fsS "$BASE_URL/diagnostics.html" | grep -q 'Diagn'
+curl -fsS "$BASE_URL/dental-v2.html" | grep -q 'Odont'
+curl -fsS "$BASE_URL/billing-v2.html" | grep -q 'Faturamento SUS v2'
+curl -fsS "$BASE_URL/governance.html" | grep -q 'Govern'
 
 # Autenticação + MFA
 LOGIN=$(curl -fsS -X POST "$BASE_URL/api/auth/login" \
@@ -42,6 +47,8 @@ curl -fsS "${AUTH[@]}" "$BASE_URL/api/security/readiness" | assert_json 'd["seed
 
 CITIZENS=$(curl -fsS "${AUTH[@]}" "$BASE_URL/api/citizens")
 CITIZEN_ID=$(python3 -c 'import json,sys; d=json.load(sys.stdin); assert len(d)>0; print(d[0]["id"])' <<<"$CITIZENS")
+CITIZEN_NAME=$(python3 -c 'import json,sys; print(json.load(sys.stdin)[0]["name"])' <<<"$CITIZENS")
+CITIZEN_UNIT=$(python3 -c 'import json,sys; print(json.load(sys.stdin)[0]["healthUnit"])' <<<"$CITIZENS")
 
 UNITS=$(curl -fsS "${AUTH[@]}" "$BASE_URL/api/units")
 UNIT_COUNT=$(python3 -c 'import json,sys; print(len(json.load(sys.stdin)))' <<<"$UNITS")
@@ -52,13 +59,19 @@ UNIT_CODE=$(python3 -c 'import json,sys; print(json.load(sys.stdin)[0]["code"])'
 HTTP_CODE=$(curl -sS -o /tmp/rbac-body.json -w '%{http_code}' -H 'X-Demo-Role: acs' "$BASE_URL/api/sus/production")
 [[ "$HTTP_CODE" == "403" ]] || { echo "Expected 403 for ACS billing, got $HTTP_CODE"; cat /tmp/rbac-body.json; exit 1; }
 
-# Contract Pack / 14 blocos
+# Contract Pack / 14 blocos / industrialização
 CONTRACT=$(curl -fsS "${AUTH[@]}" "$BASE_URL/api/contract/jundiai/readiness")
 python3 -c 'import json,sys; d=json.load(sys.stdin); assert len(d["blocks"])==14; assert d["overallScore"]>=80' <<<"$CONTRACT"
 curl -fsS "${AUTH[@]}" "$BASE_URL/api/contract/platform/readiness" | assert_json 'len(d["productionGates"])>=10 and d["currentPoc"]["status"]=="POC"'
 
 # Agenda centralizada
-curl -fsS "${AUTH[@]}" "$BASE_URL/api/scheduling/readiness" | assert_json 'd["gridCount"]>=5 and d["slotCount"]>0 and d["quotaCount"]>=5'
+SCHED=$(curl -fsS "${AUTH[@]}" "$BASE_URL/api/scheduling/readiness")
+python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["gridCount"]>=5 and d["slotCount"]>0 and d["quotaCount"]>=5' <<<"$SCHED"
+SLOTS=$(curl -fsS "${AUTH[@]}" "$BASE_URL/api/scheduling/slots")
+SLOT_ID=$(python3 -c 'import json,sys; d=json.load(sys.stdin); x=next(i for i in d if not i["blocked"] and i["booked"] < i["capacity"]); print(x["id"])' <<<"$SLOTS")
+BOOK=$(curl -fsS -X POST "${AUTH[@]}" "$BASE_URL/api/scheduling/book" -H 'Content-Type: application/json' \
+  -d "{\"slotId\":\"$SLOT_ID\",\"citizenId\":\"$CITIZEN_ID\",\"citizenName\":\"$CITIZEN_NAME\",\"priority\":\"routine\",\"source\":\"smoke\"}")
+python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["status"]=="scheduled"' <<<"$BOOK"
 
 # Porta Digital e safety kernel
 ASSESSMENT=$(curl -fsS -X POST "$BASE_URL/api/citizen/intelligent-access/evaluate" \
@@ -134,16 +147,37 @@ curl -fsS -X POST -H 'X-Demo-Role: acs' "$BASE_URL/api/psf/esus/individuals" \
   -H 'Content-Type: application/json' \
   -d "{\"citizenId\":\"$CITIZEN_ID\",\"socialName\":null,\"raceColor\":\"Nao informado\",\"education\":\"Nao informado\",\"occupation\":\"Nao informado\",\"hasDisability\":false,\"isPregnant\":false,\"isBedridden\":false,\"chronicConditions\":[\"Hipertensao\"],\"acsName\":\"ACS Smoke\"}" | grep -q 'ACS Smoke'
 
-# Billing avançado, migração, integrações, operação e analytics
-curl -fsS "${AUTH[@]}" "$BASE_URL/api/sus/billing/v2/production" | assert_json 'len(d)>=1'
+# Odontologia avançada gera produção SUS
+curl -fsS -X PUT "${AUTH[@]}" "$BASE_URL/api/dental/v2/$CITIZEN_ID/teeth/16/surfaces/O" -H 'Content-Type: application/json' \
+  -d '{"condition":"caries","notes":"smoke","professional":"Dra. Smoke"}' | grep -q 'caries'
+DENTAL=$(curl -fsS -X POST "${AUTH[@]}" "$BASE_URL/api/dental/v2/$CITIZEN_ID/procedures" -H 'Content-Type: application/json' \
+  -d "{\"citizenName\":\"$CITIZEN_NAME\",\"healthUnit\":\"$CITIZEN_UNIT\",\"sigtapCode\":\"0307030032\",\"description\":\"Restauracao smoke\",\"tooth\":16,\"sextant\":null,\"surfaces\":[\"O\"],\"cid\":\"K02.9\",\"professional\":\"Dra. Smoke\",\"professionalCouncil\":\"CRO DEMO\"}")
+python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["procedure"]["tooth"]==16 and d["production"]["procedureCode"]=="0307030032"' <<<"$DENTAL"
+
+# Billing avançado: crítica -> fechamento -> exportação -> reabertura
+PRODUCTION=$(curl -fsS "${AUTH[@]}" "$BASE_URL/api/sus/billing/v2/production")
+python3 -c 'import json,sys; d=json.load(sys.stdin); assert len(d)>=3' <<<"$PRODUCTION"
+COMPETENCE=$(date +%Y%m)
+BATCH=$(curl -fsS -X POST "${AUTH[@]}" "$BASE_URL/api/sus/billing/v2/batches" -H 'Content-Type: application/json' -d "{\"competence\":\"$COMPETENCE\"}")
+BATCH_ID=$(python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["status"]=="validated" and len(d["issues"])==0; print(d["id"])' <<<"$BATCH")
+CLOSED=$(curl -fsS -X POST "${AUTH[@]}" "$BASE_URL/api/sus/billing/v2/batches/$BATCH_ID/close" -H 'Content-Type: application/json' -d '{}')
+python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["status"]=="closed" and len(d["exportChecksum"])==64' <<<"$CLOSED"
+EXPORT=$(curl -fsS "${AUTH[@]}" "$BASE_URL/api/sus/billing/v2/batches/$BATCH_ID/export")
+python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["format"]=="POC-BPA-STRUCTURED" and len(d["sha256"])==64 and len(d["lines"])>=2' <<<"$EXPORT"
+REOPEN=$(curl -fsS -X POST "${AUTH[@]}" "$BASE_URL/api/sus/billing/v2/batches/$BATCH_ID/reopen" -H 'Content-Type: application/json' -d '{"reason":"smoke de versionamento","actor":"smoke"}')
+python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["status"]=="draft" and d["version"]==2' <<<"$REOPEN"
+
+# Migração, integrações, operação, analytics, governança e plataforma
 curl -fsS "${AUTH[@]}" "$BASE_URL/api/migration/readiness" | assert_json 'd["batches"]>=1'
 curl -fsS "${AUTH[@]}" "$BASE_URL/api/integrations/readiness" | assert_json 'd["total"]>=10 and d["homologated"]==0 and d["productionEnabled"]==0'
 curl -fsS "${AUTH[@]}" "$BASE_URL/api/operations/readiness" | assert_json 'd["trainingSessions"]>=3 and d["serviceDesk"]["total"]>=1'
 curl -fsS "${AUTH[@]}" "$BASE_URL/api/analytics/executive" | assert_json 'd["network"]["healthUnits"]==58'
+curl -fsS "${AUTH[@]}" "$BASE_URL/api/ai/readiness" | assert_json 'd["policies"]>=6'
+curl -fsS "${AUTH[@]}" "$BASE_URL/api/platform/readiness" | assert_json 'len(d["productionGates"])>=10'
 
 # Evidência e auditoria finais
 curl -fsS "${AUTH[@]}" "$BASE_URL/api/evidence/verify" | assert_json 'd["valid"] is True and d["checkedEvents"]>=1'
 curl -fsS "${AUTH[@]}" "$BASE_URL/api/dashboard" | grep -q 'citizens'
 curl -fsS "${AUTH[@]}" "$BASE_URL/api/audit" | grep -q 'warehouse.transfer'
 
-echo "Smoke POC consolidado OK"
+echo "Smoke POC consolidado v2 OK"
