@@ -53,14 +53,14 @@ public sealed class PresentationPreparationStore(
 
     private static readonly string[] CriticalPages =
     [
-        "login.html", "poc.html", "verification.html", "evidence-pack.html", "dossier.html", "command-center.html", "caretrace.html", "governance.html",
+        "login.html", "poc.html", "verification.html", "evidence-pack.html", "dossier.html", "contingency.html", "command-center.html", "caretrace.html", "governance.html",
         "registration.html", "workforce.html", "referrals.html", "clinical-ops.html", "agenda.html", "telemedicine.html", "immunization-v2.html",
         "pharmacy-care.html", "diagnostics.html", "dental-v2.html", "billing-v2.html", "operations.html", "citizen.html", "esus.html", "acs.html"
     ];
 
     private static readonly string[] CriticalAssets =
     [
-        "poc.css", "poc.js", "verification.js", "evidence-pack.js", "dossier.js", "command-center.js", "caretrace.js", "governance.js", "governance-persistence.js",
+        "poc.css", "poc.js", "verification.js", "evidence-pack.js", "dossier.js", "contingency.js", "command-center.js", "caretrace.js", "governance.js", "governance-persistence.js",
         "governance-privacy.js", "sw.js"
     ];
 
@@ -75,7 +75,7 @@ public sealed class PresentationPreparationStore(
         assets = CriticalAssets.Select(CheckWebAsset).ToArray(),
         presentationOrder = new[]
         {
-            "login + MFA", "Modo POC", "cenário ouro", "runner 14/14", "jornada assistencial", "governança", "Evidence Pack", "integrity verify", "Dossiê da Banca", "export JSON / impressão-PDF"
+            "login + MFA", "Modo POC", "cenário ouro", "runner 14/14", "jornada assistencial", "governança", "Evidence Pack", "integrity verify", "Dossiê da Banca", "provenance runtime", "Kit de Contingência", "download ZIP / impressão-PDF"
         },
         rule = "Preflight de apresentação verifica demonstrabilidade; não promove Production Gates."
     };
@@ -137,7 +137,8 @@ public sealed class PresentationPreparationStore(
                 "Apresentação pronta não significa produção pronta.",
                 "HAB-AT-29 continua dependência documental crítica.",
                 "Integrações externas continuam condicionadas a credencial/homologação oficial.",
-                "O Dossiê da Banca é uma superfície demonstrativa verificável; assinatura de release/SBOM/attestation produtivos continuam Production Gates.",
+                "O Dossiê da Banca inclui Evidence Pack, identidade de build e manifesto dos artefatos runtime; isso ainda não equivale a SBOM/attestation/release assinada.",
+                "O Kit de Contingência é uma cópia estática verificável para a banca; não é backup ou DR produtivo.",
                 persistenceRuntime.Configured
                     ? "PostgreSQL está configurado nesta instância; Production Gates de backup/PITR/DR continuam separados."
                     : "Esta instância usa fallback em memória; a fundação PostgreSQL/recovery/messaging é validada separadamente no CI."
