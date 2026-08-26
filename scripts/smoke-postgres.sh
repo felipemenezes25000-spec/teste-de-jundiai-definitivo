@@ -33,7 +33,7 @@ curl -fsS "$BASE_URL/api/health/ready" >/dev/null || { echo "Aplicação Postgre
 assert_json(){
   local label="$1"
   local expression="$2"
-  python3 -c 'import json,sys; d=json.load(sys.stdin); label=sys.argv[1]; expr=sys.argv[2]; ok=eval(expr,{"__builtins__":{}},{"d":d,"any":any,"len":len}); assert ok, f"{label}: {json.dumps(d,ensure_ascii=False)[:1800]}"' "$label" "$expression"
+  python3 -c 'import json,sys; d=json.load(sys.stdin); label=sys.argv[1]; expr=sys.argv[2]; ok=eval(expr,{"__builtins__":{}},{"d":d,"any":any,"len":len,"bool":bool}); assert ok, f"{label}: {json.dumps(d,ensure_ascii=False)[:1800]}"' "$label" "$expression"
 }
 
 stage "health readiness"
@@ -57,7 +57,6 @@ printf '%s' "$CHECKPOINT" | assert_json "basic-checkpoint" 'd["institutionId"]==
 stage "checkpoint completo"
 FULL=$(curl -fsS -X POST "${AUTH[@]}" "$BASE_URL/api/audit/persistence/checkpoints/full" -H 'Content-Type: application/json' -d '{"label":"ci-full-domain-checkpoint"}')
 FULL_ID=$(python3 -c 'import json,sys; d=json.load(sys.stdin); assert d.get("institutionId")=="jundiai-ci", d; assert d.get("healthUnitId")=="UBS-CI", d; assert d.get("envelopeCount",0)>=19, d; assert len(d.get("manifestSha256",""))==64, d; print(d["checkpointId"])' <<<"$FULL")
-
 echo "[postgres-smoke] full checkpoint=$FULL_ID"
 
 stage "manifesto SHA-256"
