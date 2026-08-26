@@ -40,10 +40,10 @@ public static class JundiaiPersistenceExtensions
 
     public static IEndpointRouteBuilder MapJundiaiPersistenceEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapGet("/api/persistence/readiness", async (PersistenceService service, CancellationToken ct) =>
+        endpoints.MapGet("/api/audit/persistence/readiness", async (PersistenceService service, CancellationToken ct) =>
             Results.Ok(await service.ReadinessAsync(ct)));
 
-        endpoints.MapPost("/api/persistence/checkpoint", async (
+        endpoints.MapPost("/api/audit/persistence/checkpoint", async (
             PersistenceCheckpointRequest request,
             HttpContext context,
             PersistenceService service,
@@ -56,19 +56,19 @@ public static class JundiaiPersistenceExtensions
         {
             var scope = TenantContextMiddleware.GetScope(context);
             var result = await service.CreateCheckpointAsync(request, scope, demo, evidence, integrations, scenarios, billing, ct);
-            return Results.Created($"/api/persistence/checkpoints/{result.CheckpointId}", result);
+            return Results.Created($"/api/audit/persistence/checkpoints/{result.CheckpointId}", result);
         });
 
-        endpoints.MapGet("/api/persistence/outbox", async (PersistenceService service, CancellationToken ct) =>
+        endpoints.MapGet("/api/audit/persistence/outbox", async (PersistenceService service, CancellationToken ct) =>
             Results.Ok(await service.OutboxAsync(ct)));
 
-        endpoints.MapPost("/api/persistence/outbox", async (CreateOutboxMessageRequest request, HttpContext context, PersistenceService service, CancellationToken ct) =>
+        endpoints.MapPost("/api/audit/persistence/outbox", async (CreateOutboxMessageRequest request, HttpContext context, PersistenceService service, CancellationToken ct) =>
         {
             var scope = TenantContextMiddleware.GetScope(context);
-            return Results.Created("/api/persistence/outbox", await service.EnqueueOutboxAsync(request, scope, ct));
+            return Results.Created("/api/audit/persistence/outbox", await service.EnqueueOutboxAsync(request, scope, ct));
         });
 
-        endpoints.MapPost("/api/persistence/outbox/{id:guid}/processed", async (Guid id, PersistenceService service, CancellationToken ct) =>
+        endpoints.MapPost("/api/audit/persistence/outbox/{id:guid}/processed", async (Guid id, PersistenceService service, CancellationToken ct) =>
             Results.Ok(await service.MarkOutboxProcessedAsync(id, ct)));
 
         return endpoints;
