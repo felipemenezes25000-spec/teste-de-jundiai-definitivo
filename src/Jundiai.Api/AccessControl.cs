@@ -62,6 +62,7 @@ public static class JundiaiPermissionCatalog
                 JundiaiPermissions.BillingManage,
                 JundiaiPermissions.ImmunizationRead,
                 JundiaiPermissions.InventoryRead,
+                JundiaiPermissions.InventoryManage,
                 JundiaiPermissions.PsfRead,
                 JundiaiPermissions.DentalRead,
                 JundiaiPermissions.DiagnosticsRead,
@@ -141,7 +142,9 @@ public sealed class DemoAccessControlMiddleware(RequestDelegate next)
 
     public async Task InvokeAsync(HttpContext context)
     {
-        if (!context.Request.Path.StartsWithSegments("/api") || context.Request.Path.StartsWithSegments("/api/health"))
+        if (!context.Request.Path.StartsWithSegments("/api") ||
+            context.Request.Path.StartsWithSegments("/api/health") ||
+            context.Request.Path.StartsWithSegments("/api/citizen"))
         {
             await next(context);
             return;
@@ -164,7 +167,15 @@ public sealed class DemoAccessControlMiddleware(RequestDelegate next)
         var required = ResolveRequiredPermission(context.Request);
         if (required is null)
         {
-            await next(context);
+            context.Response.StatusCode = StatusCodes.Status403Forbidden;
+            context.Response.ContentType = "application/problem+json";
+            await context.Response.WriteAsync(JsonSerializer.Serialize(new
+            {
+                type = "https://jundiai-healthos.local/problems/unmapped-permission",
+                title = "Endpoint sem política de acesso",
+                status = 403,
+                detail = $"A rota '{context.Request.Path}' não possui política explícita e foi bloqueada por padrão."
+            }, Json));
             return;
         }
 
@@ -201,12 +212,13 @@ public sealed class DemoAccessControlMiddleware(RequestDelegate next)
         var write = !HttpMethods.IsGet(request.Method) && !HttpMethods.IsHead(request.Method);
         var path = request.Path;
 
-        if (path.StartsWithSegments("/api/dashboard") || path.StartsWithSegments("/api/citizens")) return JundiaiPermissions.CitizenRead;
-        if (path.StartsWithSegments("/api/clinical")) return write ? JundiaiPermissions.ClinicalWrite : JundiaiPermissions.ClinicalRead;
+        if (path.StartsWithSegments("/api/access/context")) return JundiaiPermissions.CitizenRead;
+        if (path.StartsWithSegments("/api/dashboard") || path.StartsWithSegments("/api/citizens") || path.StartsWithSegments("/api/units")) return JundiaiPermissions.CitizenRead;
+        if (path.StartsWithSegments("/api/clinical") || path.StartsWithSegments("/api/ubs") || path.StartsWithSegments("/api/records")) return write ? JundiaiPermissions.ClinicalWrite : JundiaiPermissions.ClinicalRead;
         if (path.StartsWithSegments("/api/regulation")) return write ? JundiaiPermissions.RegulationManage : JundiaiPermissions.RegulationRead;
         if (path.StartsWithSegments("/api/sus")) return write ? JundiaiPermissions.BillingManage : JundiaiPermissions.BillingRead;
         if (path.StartsWithSegments("/api/immunization")) return write ? JundiaiPermissions.ImmunizationWrite : JundiaiPermissions.ImmunizationRead;
-        if (path.StartsWithSegments("/api/pharmacy")) return write ? JundiaiPermissions.InventoryManage : JundiaiPermissions.InventoryRead;
+        if (path.StartsWithSegments("/api/pharmacy") || path.StartsWithSegments("/api/warehouse")) return write ? JundiaiPermissions.InventoryManage : JundiaiPermissions.InventoryRead;
         if (path.StartsWithSegments("/api/psf")) return write ? JundiaiPermissions.PsfWrite : JundiaiPermissions.PsfRead;
         if (path.StartsWithSegments("/api/dental")) return write ? JundiaiPermissions.DentalWrite : JundiaiPermissions.DentalRead;
         if (path.StartsWithSegments("/api/diagnostics")) return write ? JundiaiPermissions.DiagnosticsWrite : JundiaiPermissions.DiagnosticsRead;
