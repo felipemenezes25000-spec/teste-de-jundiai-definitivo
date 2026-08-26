@@ -50,9 +50,10 @@ public sealed class EvidenceLedgerStore
             var sequence = previous?.Sequence + 1 ?? 1;
             var previousHash = previous?.Hash ?? new string('0', 64);
             var occurredAt = DateTimeOffset.UtcNow;
-            var payload = Canonical(sequence, request.Actor, request.Action, request.Resource, request.RequirementId, request.Detail, request.EvidenceType, occurredAt, previousHash);
+            var evidenceType = request.EvidenceType?.Trim() ?? "event";
+            var payload = Canonical(sequence, request.Actor, request.Action, request.Resource, request.RequirementId, request.Detail, evidenceType, occurredAt, previousHash);
             var hash = Sha256(payload);
-            var evt = new EvidenceLedgerEvent(Guid.NewGuid(), sequence, request.Actor.Trim(), request.Action.Trim(), request.Resource.Trim(), request.RequirementId?.Trim(), request.Detail?.Trim(), request.EvidenceType?.Trim() ?? "event", occurredAt, previousHash, hash);
+            var evt = new EvidenceLedgerEvent(Guid.NewGuid(), sequence, request.Actor.Trim(), request.Action.Trim(), request.Resource.Trim(), request.RequirementId?.Trim(), request.Detail?.Trim(), evidenceType, occurredAt, previousHash, hash);
             _events.Add(evt);
             return evt;
         }
