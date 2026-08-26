@@ -38,7 +38,7 @@ app.MapGet("/api/citizens/{id:guid}", (Guid id, DemoStore store) =>
 
 app.MapGet("/api/regulation", (DemoStore store) => Results.Ok(store.Regulation()));
 app.MapPost("/api/regulation", (CreateRegulationRequest request, DemoStore store) =>
-    Execute(() => Results.Created($"/api/regulation", store.CreateRegulation(request))));
+    Execute(() => Results.Created("/api/regulation", store.CreateRegulation(request))));
 app.MapPost("/api/regulation/{id:guid}/transition", (Guid id, RegulationTransitionRequest request, DemoStore store) =>
     Execute(() => store.AdvanceRegulation(id, request.Status, request.ScheduledAt) is { } updated ? Results.Ok(updated) : Results.NotFound()));
 
@@ -111,4 +111,4 @@ static IResult Execute(Func<IResult> action)
 public sealed record RegulationTransitionRequest(string Status, DateTimeOffset? ScheduledAt);
 public sealed record AuditRequest(string Action, string Resource, string? Detail);
 
-public partial class Program;
+public partial class Program { }
