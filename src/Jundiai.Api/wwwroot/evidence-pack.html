@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Jundiaí HealthOS · Evidence Pack</title>
+  <link rel="stylesheet" href="/poc.css" />
+  <style>
+    .pack-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.hash{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-all;background:#f5f7fa;border:1px solid var(--line);border-radius:10px;padding:10px}.block-evidence{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.pack-block{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px}.pack-block header{display:flex;gap:10px;justify-content:space-between}.pack-block h3{margin:0}.pack-block p{color:var(--muted);font-size:12px}.routes{font:11px ui-monospace,SFMono-Regular,Menlo,monospace;color:#345;word-break:break-all}.pill{padding:5px 8px;border-radius:999px;background:#eef4fb;font-size:10px;font-weight:850}.ok{background:#eaf8ef;color:#1c6a38}.warn{background:#fff3d9;color:#8a5a00}.mini-list{display:grid;gap:7px}.mini{border:1px solid var(--line);border-radius:10px;padding:10px;background:#fff}.mini strong{display:block}.mini small{color:var(--muted)}@media(max-width:850px){.block-evidence{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><div class="brand-mark">E</div><div><strong>Evidence Pack</strong><small>RCE 008/2026 · prova técnica consolidada</small></div></div>
+  <div class="top-actions"><a class="button ghost" href="/poc.html">← Modo POC</a><a class="button ghost" href="/verification.html">Runner 14 blocos</a><a class="button ghost" href="/governance.html">Governança</a></div>
+</header>
+<main class="shell">
+  <section class="hero">
+    <div><p class="eyebrow">Pacote verificável da apresentação</p><h1>14 blocos, evidências, dependências e hash em um único artefato</h1><p>Gera um snapshot auditável da capacidade demonstrável desta instância. O pacote diferencia POC, integração externa e industrialização de produção.</p></div>
+    <div class="score" id="pack-score" style="--score:0%"><div><strong id="score-value">—</strong><span>score POC</span></div></div>
+  </section>
+
+  <div id="error" class="risk" hidden></div>
+  <div class="section-head"><div><h2>Controle do pacote</h2><p>Gerar executa uma verificação fresca dos 14 blocos e captura o estado atual.</p></div><div class="pack-actions"><button id="generate">Gerar Evidence Pack</button><button class="ghost" id="verify">Verificar integridade</button><a class="button ghost" id="export" href="/api/poc/evidence-pack/latest/export">Exportar JSON</a></div></div>
+  <section class="summary-grid" id="summary"></section>
+  <section id="pack-meta" class="footer-note">Nenhum pacote carregado ainda.</section>
+
+  <div class="section-head"><div><h2>Índice dos 14 blocos</h2><p>Cada item cruza runner, Contract Pack, rotas e Evidence Ledger.</p></div></div>
+  <section class="block-evidence" id="blocks"></section>
+
+  <div class="section-head"><div><h2>Fronteiras externas</h2><p>Nenhuma integração é promovida para homologada/produção sem referência de evidência.</p></div></div>
+  <section class="module-grid" id="integrations"></section>
+
+  <div class="section-head"><div><h2>Bloqueadores não resolvidos por código</h2><p>Itens de habilitação, homologação, implantação e operação permanecem explícitos.</p></div></div>
+  <section class="mini-list" id="blockers"></section>
+
+  <div class="section-head"><div><h2>Persistência e continuidade</h2><p>Estado capturado no momento da geração do pacote.</p></div></div>
+  <section class="module-grid" id="persistence"></section>
+
+  <section class="footer-note"><strong>Semântica do artefato</strong><p>SHA-256 é calculado sobre JSON canônico determinístico. A verificação do pacote comprova integridade do payload e a cadeia local de evidências; não substitui assinatura ICP-Brasil, carimbo do tempo oficial, homologação externa, habilitação documental ou aceite de produção.</p></section>
+</main>
+<script src="/evidence-pack.js"></script>
+</body>
+</html>
