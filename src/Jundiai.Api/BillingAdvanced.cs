@@ -23,13 +23,8 @@ public static class BillingAdvancedEndpoints
         endpoints.MapPost("/api/sus/billing/v2/batches/{id:guid}/validate", (Guid id, SusBillingEngineStore store) => Results.Ok(store.Validate(id)));
         endpoints.MapPost("/api/sus/billing/v2/batches/{id:guid}/close", (Guid id, SusBillingEngineStore store) => Results.Ok(store.Close(id)));
         endpoints.MapPost("/api/sus/billing/v2/batches/{id:guid}/reopen", (Guid id, ReopenBillingBatchRequest request, SusBillingEngineStore store) => Results.Ok(store.Reopen(id, request)));
-        endpoints.MapGet("/api/sus/billing/v2/batches/{id:guid}/export", (Guid id, SusBillingEngineStore store) =>
-        {
-            var export = store.Export(id);
-            return Results.Ok(export);
-        });
+        endpoints.MapGet("/api/sus/billing/v2/batches/{id:guid}/export", (Guid id, SusBillingEngineStore store) => Results.Ok(store.Export(id)));
         endpoints.MapGet("/api/sus/billing/v2/batches/{id:guid}/history", (Guid id, SusBillingEngineStore store) => Results.Ok(store.History(id)));
-
         return endpoints;
     }
 }
@@ -41,7 +36,7 @@ public sealed class SusBillingEngineStore
     private readonly ConcurrentDictionary<Guid, AdvancedBillingBatch> _batches = new();
     private readonly ConcurrentDictionary<Guid, List<BillingBatchEvent>> _history = new();
 
-    public SusBillingEngineStore()
+    public SusBillingEngineStore(DemoStore demo)
     {
         SeedProcedure("0301010072", "Consulta médica em atenção especializada", "BPA-I", ["2251", "2252", "2253"], null, null, 0, 130);
         SeedProcedure("0301100039", "Aferição de pressão arterial", "BPA-C", ["3222", "2235"], null, null, 0, 130);
@@ -52,9 +47,10 @@ public sealed class SusBillingEngineStore
         SeedProcedure("0202020380", "Hemograma completo", "BPA-I", ["2251", "2235"], null, null, 0, 130);
         SeedProcedure("0205020046", "Ultrassonografia de abdome total", "BPA-I", ["2251"], null, null, 0, 130);
 
-        var demoCitizen = Guid.Parse("11111111-1111-1111-1111-111111111111");
-        RegisterProduction(new RegisterSusProductionRequest(demoCitizen, "Maria da Silva", "UBS Vila Hortolândia", "0301010072", "225125", "I10", "F", 67, "Dr. Eduardo Martins", "CRM 000001", DateOnly.FromDateTime(DateTime.Today.AddDays(-2)), null, null, "municipal"));
-        RegisterProduction(new RegisterSusProductionRequest(demoCitizen, "Maria da Silva", "UBS Vila Hortolândia", "0301100039", "322205", "I10", "F", 67, "Enf. Juliana Ramos", "COREN 000001", DateOnly.FromDateTime(DateTime.Today.AddDays(-2)), null, null, "municipal"));
+        var citizen = demo.Citizens().FirstOrDefault() ?? throw new InvalidOperationException("POC sem cidadão seed para faturamento SUS.");
+        var age = Age(citizen.BirthDate, DateOnly.FromDateTime(DateTime.Today));
+        RegisterProduction(new RegisterSusProductionRequest(citizen.Id, citizen.Name, citizen.HealthUnit, "0301010072", "225125", "I10", null, age, "Dr. Eduardo Martins", "CRM 000001", DateOnly.FromDateTime(DateTime.Today.AddDays(-2)), null, null, "municipal"));
+        RegisterProduction(new RegisterSusProductionRequest(citizen.Id, citizen.Name, citizen.HealthUnit, "0301100039", "322205", "I10", null, age, "Enf. Juliana Ramos", "COREN 000001", DateOnly.FromDateTime(DateTime.Today.AddDays(-2)), null, null, "municipal"));
     }
 
     public IReadOnlyList<SigtapProcedure> Catalog() => _catalog.Values.OrderBy(x => x.Code).ToList();
@@ -160,6 +156,12 @@ public sealed class SusBillingEngineStore
         return lines;
     }
 
+    private static int Age(DateOnly birthDate, DateOnly today)
+    {
+        var age = today.Year - birthDate.Year;
+        if (birthDate > today.AddYears(-age)) age--;
+        return Math.Max(age, 0);
+    }
     private static string ComputeChecksum(IReadOnlyList<string> lines) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join('\n', lines)))).ToLowerInvariant();
     private static string Sanitize(string? value) => (value ?? string.Empty).Replace("|", "/").Trim();
     private AdvancedBillingBatch Required(Guid id) => _batches.TryGetValue(id, out var batch) ? batch : throw new KeyNotFoundException();
@@ -170,7 +172,6 @@ public sealed class SusBillingEngineStore
         if (normalized.Length != 6 || !int.TryParse(normalized, out _)) throw new ArgumentException("Competência deve estar em yyyyMM.");
         return normalized;
     }
-
     private void SeedProcedure(string code, string name, string billingForm, IReadOnlyList<string> cboPrefixes, string? sex, string? cidPrefix, int minAge, int maxAge, bool tooth = false, bool sextant = false) =>
         _catalog[code] = new SigtapProcedure(code, name, billingForm, cboPrefixes, sex, cidPrefix, minAge, maxAge, tooth || code is "0307030024" or "0307030032", sextant || code == "0307080015");
 }
