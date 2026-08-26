@@ -62,12 +62,16 @@ jobs:
             playwright.config.mjs; do
             node --check "$file"
           done
-      - name: Validate smoke scripts
+      - name: Validate smoke and inventory scripts
         run: |
           bash -n scripts/smoke.sh
           bash -n scripts/smoke-platform.sh
+          bash -n scripts/smoke-security.sh
           bash -n scripts/smoke-postgres.sh
           bash -n scripts/smoke-wave4.sh
+          python3 -m py_compile scripts/verify-dependency-inventory.py
+      - name: Verify dependency inventory drift
+        run: python3 scripts/verify-dependency-inventory.py
       - name: Public repository secret hygiene
         run: |
           if grep -R -n -E 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|AKIA[0-9A-Z]{16}' --exclude-dir=.git .; then
@@ -78,6 +82,10 @@ jobs:
         run: dotnet restore src/Jundiai.Api/Jundiai.Api.csproj
       - name: Build Release
         run: dotnet build src/Jundiai.Api/Jundiai.Api.csproj -c Release --no-restore
+      - name: Smoke negative authorization
+        env:
+          JUNDIAI_ALLOW_DEMO_ROLE_HEADER: 'false'
+        run: bash scripts/smoke-security.sh
       - name: Smoke integrated POC
         run: bash scripts/smoke.sh
       - name: Smoke platform governance
