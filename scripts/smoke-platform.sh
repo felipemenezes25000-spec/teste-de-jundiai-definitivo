@@ -49,7 +49,14 @@ python3 -c 'import json,sys; d=json.load(sys.stdin); assert len(d["sha256"])==64
 # Telemetria deve refletir chamadas feitas durante o próprio smoke.
 curl -fsS "${AUTH[@]}" "$BASE_URL/api/operations/telemetry" | assert_json 'd["totalRequests"]>=10 and len(d["groups"])>=3'
 
-# Evidence Ledger recebeu controles de privacidade.
-curl -fsS "${AUTH[@]}" "$BASE_URL/api/evidence/ledger" | assert_json 'any(x["action"]=="privacy.break-glass.open" for x in d) and any(x["action"]=="privacy.subject-export.generate" for x in d)'
+# Evidence Pack: executa 14 blocos, cruza Contract Pack, dependências e Evidence Ledger e produz hash canônico.
+PACK=$(curl -fsS -X POST "${AUTH[@]}" "$BASE_URL/api/poc/evidence-pack" -H 'Content-Type: application/json' -d '{"actor":"smoke.platform","reRunVerification":true}')
+PACK_ID=$(python3 -c 'import json,sys; d=json.load(sys.stdin); assert len(d["packageSha256"])==64; p=d["payload"]; assert p["verification"]["passedBlocks"]==14 and p["verification"]["totalBlocks"]==14; assert len(p["blocks"])==14; assert any(x["id"]=="HAB-AT-29" for x in p["nonCodeBlockers"]); assert p["persistence"]["configured"] is False; print(p["packId"])' <<<"$PACK")
+curl -fsS "${AUTH[@]}" "$BASE_URL/api/poc/evidence-pack/latest/manifest" | assert_json 'd["passedBlocks"]==14 and d["totalBlocks"]==14 and d["indexedBlocks"]==14 and len(d["packageSha256"])==64 and d["packageHashValid"] is True and d["ledgerChainValid"] is True'
+curl -fsS "${AUTH[@]}" "$BASE_URL/api/poc/evidence-pack/latest/verify" | assert_json 'd["packageHashValid"] is True and d["ledgerChainValid"] is True and d["demonstrationIntegrityReady"] is True and d["passedBlocks"]==14'
+curl -fsS "${AUTH[@]}" "$BASE_URL/api/poc/evidence-pack/latest/export" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["payload"]["packId"]==sys.argv[1] and len(d["packageSha256"])==64' "$PACK_ID"
 
-echo "Smoke plataforma OK"
+# Evidence Ledger recebeu controles de privacidade, runner e geração do pacote.
+curl -fsS "${AUTH[@]}" "$BASE_URL/api/evidence/ledger" | assert_json 'any(x["action"]=="privacy.break-glass.open" for x in d) and any(x["action"]=="privacy.subject-export.generate" for x in d) and any(x["action"]=="poc.run.complete" for x in d) and any(x["action"]=="poc.evidence-pack.generate" for x in d)'
+
+echo "Smoke plataforma + Evidence Pack OK"
