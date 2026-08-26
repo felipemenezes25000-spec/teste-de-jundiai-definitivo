@@ -25,7 +25,8 @@ public static class IntegrationMessagingPersistenceEndpoints
                 "POC-B14",
                 $"duplicate={result.Duplicate};hash={result.PayloadSha256}",
                 "integration-inbox"));
-            return result.Duplicate ? Results.Ok(result) : Results.Accepted($"/api/audit/persistence/inbox/{result.ReceiptId}", result);
+            if (result.Duplicate) return Results.Ok(result);
+            return Results.Accepted($"/api/audit/persistence/inbox/{result.ReceiptId}", result);
         });
 
         endpoints.MapGet("/api/audit/persistence/inbox", async (
@@ -180,6 +181,7 @@ public sealed class IntegrationMessagingPersistenceService(IServiceProvider serv
         var message = await db.IntegrationOutbox.FirstOrDefaultAsync(x => x.Id == id && x.InstitutionId == tenant.InstitutionId, ct)
             ?? throw new KeyNotFoundException();
         if (message.Status == "processed") throw new InvalidOperationException("Mensagem processada não pode registrar falha de entrega.");
+        if (message.Status == "dead_letter") throw new InvalidOperationException("Mensagem em dead-letter exige requeue manual antes de nova tentativa.");
 
         var maxAttempts = Math.Clamp(request.MaxAttempts ?? 5, 1, 20);
         message.Attempts++;
