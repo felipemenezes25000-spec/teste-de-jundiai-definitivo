@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 
@@ -113,7 +111,7 @@ public sealed class IntegrationMessagingPersistenceService(IServiceProvider serv
             return new InboxReceiptResult(existing.Id, tenant.InstitutionId, type, messageId, true, existing.ResponseHash ?? string.Empty, existing.CreatedAt);
 
         var payloadJson = JsonSerializer.Serialize(request.Payload ?? new { }, JsonOptions);
-        var hash = Sha256(payloadJson);
+        var hash = DurableJson.Sha256Canonical(payloadJson);
         var now = DateTimeOffset.UtcNow;
         var receiptId = Guid.NewGuid();
         var retentionDays = Math.Clamp(request.IdempotencyRetentionDays ?? 30, 1, 3650);
@@ -205,7 +203,7 @@ public sealed class IntegrationMessagingPersistenceService(IServiceProvider serv
             Kind = "integration-outbox-delivery",
             ResourceId = message.Id.ToString("N"),
             PayloadJson = detail,
-            ContentHash = Sha256(detail),
+            ContentHash = DurableJson.Sha256Canonical(detail),
             OccurredAt = DateTimeOffset.UtcNow,
             Label = message.Status
         });
@@ -228,7 +226,7 @@ public sealed class IntegrationMessagingPersistenceService(IServiceProvider serv
         {
             Id = Guid.NewGuid(), CheckpointId = message.Id, InstitutionId = tenant.InstitutionId, HealthUnitId = tenant.HealthUnitId,
             Kind = "integration-outbox-requeue", ResourceId = message.Id.ToString("N"), PayloadJson = detail,
-            ContentHash = Sha256(detail), OccurredAt = DateTimeOffset.UtcNow, Label = "manual-requeue"
+            ContentHash = DurableJson.Sha256Canonical(detail), OccurredAt = DateTimeOffset.UtcNow, Label = "manual-requeue"
         });
         await db.SaveChangesAsync(ct);
         return new OutboxDeliveryState(message.Id, message.Status, message.Attempts, Math.Max(message.Attempts + 1, 5), "manual-requeue", DateTimeOffset.UtcNow);
@@ -249,7 +247,7 @@ public sealed class IntegrationMessagingPersistenceService(IServiceProvider serv
             inboxReceipts = inbox,
             pendingOutbox = pending,
             deadLetter,
-            capabilities = new[] { "persisted inbox receipt", "inbox idempotency", "payload SHA-256", "outbox retry state", "dead-letter", "manual requeue with reason", "tenant isolation" },
+            capabilities = new[] { "persisted inbox receipt", "inbox idempotency", "canonical JSONB SHA-256", "outbox retry state", "dead-letter", "manual requeue with reason", "tenant isolation" },
             productionGap = "Workers, backoff/jitter, broker/queue gerenciada, métricas de entrega e adapters externos reais devem ser definidos na implantação."
         };
     }
@@ -259,8 +257,6 @@ public sealed class IntegrationMessagingPersistenceService(IServiceProvider serv
         if (!runtime.Configured) throw new InvalidOperationException("Persistência PostgreSQL não está configurada nesta instância da POC.");
         return services.GetRequiredService<IDbContextFactory<JundiaiDbContext>>();
     }
-
-    private static string Sha256(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
 }
 
 public sealed record AcceptIntegrationInboxRequest(string Type, string MessageId, object? Payload, string? Actor, int? IdempotencyRetentionDays);
