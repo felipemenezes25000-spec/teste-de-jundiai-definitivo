@@ -16,6 +16,8 @@ public static class PocVerificationRunnerEndpoints
             MunicipalOperationsStore operations,
             DemoIdentityStore identities,
             CitizenMasterDataStore masterData,
+            ProfessionalRegistryStore professionals,
+            ReferralNetworkStore referrals,
             SchedulingStore scheduling,
             ClinicalOrderStore clinical,
             DiagnosticsAdvancedStore diagnostics,
@@ -26,7 +28,7 @@ public static class PocVerificationRunnerEndpoints
             TelemedicineStore telemedicine,
             EvidenceLedgerStore evidence) =>
         {
-            var run = store.Run(demo, operations, identities, masterData, scheduling, clinical, diagnostics, immunization, billing, inventory, pharmacy, telemedicine, evidence);
+            var run = store.Run(demo, operations, identities, masterData, professionals, referrals, scheduling, clinical, diagnostics, immunization, billing, inventory, pharmacy, telemedicine, evidence);
             return Results.Ok(run);
         });
 
@@ -46,6 +48,8 @@ public sealed class PocVerificationRunnerStore
         MunicipalOperationsStore operations,
         DemoIdentityStore identities,
         CitizenMasterDataStore masterData,
+        ProfessionalRegistryStore professionals,
+        ReferralNetworkStore referrals,
         SchedulingStore scheduling,
         ClinicalOrderStore clinical,
         DiagnosticsAdvancedStore diagnostics,
@@ -60,10 +64,10 @@ public sealed class PocVerificationRunnerStore
         {
             Check(1, "Administração, segurança e auditoria", identities.DemoUsers().Count >= 8 && evidence.Verify().Valid, 96,
                 "RBAC/MFA POC + ledger íntegro", ["/api/security/readiness", "/api/evidence/verify"]),
-            Check(2, "Cadastros e identificação", masterData.Search(null).Count > 0, 93,
-                "MPI municipal, busca, território e reconciliação; CadSUS externo", ["/api/citizens/master/readiness", "/citizen-master.html"]),
-            Check(3, "Regulação", demo.Regulation().Count > 0, 94,
-                "Fila, prioridade, transições e destino", ["/api/regulation"]),
+            Check(2, "Cadastros e identificação", masterData.Search(null).Count > 0 && professionals.Search(null, null).Count >= 8, 95,
+                "MPI municipal + cadastro profissional/CBO/conselho/lotação; CadSUS externo", ["/api/citizens/master/readiness", "/registration.html", "/api/professionals/readiness"]),
+            Check(3, "Regulação", demo.Regulation().Count > 0 && referrals.Referrals(null).Count > 0, 96,
+                "Fila regulatória + referência e contrarreferência", ["/api/regulation", "/api/referrals", "/api/referrals/readiness"]),
             Check(4, "Agendamento", scheduling.Slots(null, null, null).Count > 0 && scheduling.Grids().Count >= 5, 95,
                 "Grades, cotas, lifecycle, remarcação e perdas", ["/api/scheduling/readiness", "/agenda.html"]),
             Check(5, "Recepção", operations.Units().Count == 58, 92,
@@ -85,7 +89,7 @@ public sealed class PocVerificationRunnerStore
             Check(13, "Cidadão digital e telemedicina", true, 94,
                 $"Porta digital + safety kernel + telemedicina ({telemedicine.Sessions().Count} sessão(ões) nesta instância)", ["/citizen.html", "/telemedicine.html", "/api/telemedicine/readiness"]),
             Check(14, "Indicadores, gestão e evidências", evidence.Verify().Valid, 97,
-                "Command Center, Contract Pack, auditoria, CareTrace e Evidence Ledger", ["/api/analytics/command-center", "/command-center.html", "/poc.html"])
+                "Command Center, Contract Pack, auditoria, CareTrace e Evidence Ledger", ["/api/analytics/command-center", "/command-center.html", "/verification.html", "/poc.html"])
         };
 
         var passed = checks.Count(x => x.Passed);
