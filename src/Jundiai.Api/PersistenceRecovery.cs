@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
@@ -148,7 +147,7 @@ public sealed class PersistenceRecoveryService(IServiceProvider services, Persis
         foreach (var snapshot in snapshots)
         {
             var json = JsonSerializer.Serialize(snapshot.Payload, JsonOptions);
-            var hash = Sha256(json);
+            var hash = DurableJson.Sha256Canonical(json);
             hashes.Add($"{snapshot.Kind}|{snapshot.ResourceId}|{hash}");
             db.DurableEnvelopes.Add(new DurableEnvelope
             {
@@ -167,7 +166,7 @@ public sealed class PersistenceRecoveryService(IServiceProvider services, Persis
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
 
-        var manifestHash = Sha256(string.Join('\n', hashes.OrderBy(x => x, StringComparer.Ordinal)));
+        var manifestHash = DurableJson.Sha256Text(string.Join('\n', hashes.OrderBy(x => x, StringComparer.Ordinal)));
         return new FullCheckpointResult(checkpointId, scope.InstitutionId, scope.HealthUnitId, snapshots.Length, label, manifestHash, now);
     }
 
@@ -199,7 +198,7 @@ public sealed class PersistenceRecoveryService(IServiceProvider services, Persis
         var entries = rows.OrderBy(x => x.Kind).ThenBy(x => x.ResourceId)
             .Select(x => new CheckpointManifestEntry(x.Kind, x.ResourceId, x.ContentHash, Encoding.UTF8.GetByteCount(x.PayloadJson), x.OccurredAt))
             .ToList();
-        var manifestHash = Sha256(string.Join('\n', entries.Select(x => $"{x.Kind}|{x.ResourceId}|{x.ContentHash}")));
+        var manifestHash = DurableJson.Sha256Text(string.Join('\n', entries.Select(x => $"{x.Kind}|{x.ResourceId}|{x.ContentHash}")));
         return new CheckpointManifest(checkpointId, scope.InstitutionId, rows.First().HealthUnitId, rows.First().Label ?? "checkpoint", entries, manifestHash, rows.Max(x => x.OccurredAt));
     }
 
@@ -213,7 +212,7 @@ public sealed class PersistenceRecoveryService(IServiceProvider services, Persis
         var failures = new List<string>();
         foreach (var row in rows)
         {
-            var computed = Sha256(row.PayloadJson);
+            var computed = DurableJson.Sha256Canonical(row.PayloadJson);
             if (!string.Equals(computed, row.ContentHash, StringComparison.OrdinalIgnoreCase))
                 failures.Add($"hash:{row.Kind}:{row.ResourceId}");
         }
@@ -244,7 +243,7 @@ public sealed class PersistenceRecoveryService(IServiceProvider services, Persis
             rows.Count,
             request.Actor?.Trim() ?? "persistence.recovery",
             DateTimeOffset.UtcNow,
-            "Recovery drill da POC valida integridade e desserialização dos snapshots; não equivale a restauração produtiva/PITR/DR testado em infraestrutura final.");
+            "Recovery drill da POC valida integridade semântica canônica dos snapshots JSONB e desserialização; não equivale a restauração produtiva/PITR/DR testado em infraestrutura final.");
     }
 
     public async Task<object> ReadinessAsync(TenantScope scope, CancellationToken ct)
@@ -268,7 +267,7 @@ public sealed class PersistenceRecoveryService(IServiceProvider services, Persis
             latestCheckpointAt = checkpoints.FirstOrDefault()?.CreatedAt,
             recoveryDrillAvailable = checkpoints.Count > 0,
             criticalKinds = CriticalKinds,
-            capabilities = new[] { "full-domain checkpoint", "per-institution isolation", "SHA-256 envelope verification", "manifest hash", "restore JSON preview", "RPO age measurement" },
+            capabilities = new[] { "full-domain checkpoint", "per-institution isolation", "canonical JSONB SHA-256 verification", "manifest hash", "restore JSON preview", "RPO age measurement" },
             productionGaps = new[] { "managed backup/PITR", "offsite copy", "restore into isolated environment", "RTO benchmark", "scheduled DR exercise", "retention/legal archive policy" }
         };
     }
@@ -290,8 +289,6 @@ public sealed class PersistenceRecoveryService(IServiceProvider services, Persis
             throw new InvalidOperationException("Persistência PostgreSQL não está configurada nesta instância da POC.");
         return services.GetRequiredService<IDbContextFactory<JundiaiDbContext>>();
     }
-
-    private static string Sha256(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
 }
 
 public sealed record FullCheckpointRequest(string? Label);
