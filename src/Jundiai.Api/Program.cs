@@ -39,6 +39,7 @@ app.MapGet("/api/citizens/{id:guid}", (Guid id, DemoStore store) =>
     store.Citizen(id) is { } citizen ? Results.Ok(citizen) : Results.NotFound());
 
 app.MapClinicalEndpoints();
+app.MapIntelligentAccessEndpoints();
 
 app.MapGet("/api/regulation", (DemoStore store) => Results.Ok(store.Regulation()));
 app.MapPost("/api/regulation", (CreateRegulationRequest request, DemoStore store) =>
