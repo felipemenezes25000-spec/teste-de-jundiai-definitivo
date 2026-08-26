@@ -10,6 +10,7 @@ builder.Services.Configure<JsonOptions>(options =>
     options.SerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
 });
 builder.Services.AddSingleton<DemoStore>();
+builder.Services.AddSingleton<MunicipalOperationsStore>();
 
 var app = builder.Build();
 app.UseDefaultFiles();
@@ -40,6 +41,7 @@ app.MapGet("/api/citizens/{id:guid}", (Guid id, DemoStore store) =>
 
 app.MapClinicalEndpoints();
 app.MapIntelligentAccessEndpoints();
+app.MapMunicipalOperations();
 
 app.MapGet("/api/regulation", (DemoStore store) => Results.Ok(store.Regulation()));
 app.MapPost("/api/regulation", (CreateRegulationRequest request, DemoStore store) =>
