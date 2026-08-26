@@ -6,7 +6,12 @@ const toast = $('#toast');
 const api = async (url, options = {}) => {
   const response = await fetch(url, {
     ...options,
-    headers: { 'Content-Type': 'application/json', 'X-Demo-User': 'gestor.jundiai', ...(options.headers || {}) }
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Demo-User': 'poc.operador',
+      'X-Demo-Role': 'poc_admin',
+      ...(options.headers || {})
+    }
   });
   if (!response.ok) {
     const problem = await response.json().catch(() => ({}));
@@ -29,12 +34,16 @@ function showToast(message, type = 'ok') {
   showToast.timer = setTimeout(() => toast.hidden = true, 3200);
 }
 
+function metric(label, value, sub) {
+  return `<div class="metric"><span>${esc(label)}</span><strong>${esc(value)}</strong><small>${esc(sub)}</small></div>`;
+}
+
 async function overview() {
   title.textContent = 'Centro de comando municipal';
   const [d, regulation, exams] = await Promise.all([api('/api/dashboard'), api('/api/regulation'), api('/api/diagnostics/exams')]);
   content.innerHTML = `
     <div class="hero-card">
-      <div><p class="eyebrow">Jornada pública integrada</p><h2>Da UBS ao faturamento, com rastreabilidade</h2><p>Base independente para a POC do RCE 008/2026, reunindo os domínios que mais faltavam no RenoveJá Public Service.</p></div>
+      <div><p class="eyebrow">Jornada pública integrada</p><h2>Da UBS ao faturamento, com rastreabilidade</h2><p>Base independente para a POC do RCE 008/2026, consolidando módulos assistenciais, regulatórios, territoriais, farmacêuticos e fiscais.</p></div>
       <div class="hero-tag">POC navegável</div>
     </div>
     <div class="metrics">
@@ -55,14 +64,39 @@ async function overview() {
     </div>`;
 }
 
-function metric(label, value, sub) {
-  return `<div class="metric"><span>${esc(label)}</span><strong>${esc(value)}</strong><small>${esc(sub)}</small></div>`;
+async function clinical() {
+  title.textContent = 'Prontuário longitudinal · Patient 360';
+  const [citizens, workspaces] = await Promise.all([api('/api/citizens'), api('/api/clinical/workspaces')]);
+  const citizen = citizens[0];
+  const summary = await api(`/api/clinical/patients/${citizen.id}/summary`);
+  const p = summary.profile;
+  content.innerHTML = `
+    <div class="split-heading"><div><p class="eyebrow">Contexto clínico unificado</p><h2>${esc(citizen.name)}</h2></div>${badge(citizen.healthUnit)}</div>
+    <div class="metrics clinical-metrics">
+      ${metric('PA', p.lastVitals.bloodPressure, 'última aferição')}
+      ${metric('FC', `${p.lastVitals.heartRate} bpm`, 'frequência cardíaca')}
+      ${metric('SpO₂', `${p.lastVitals.spo2}%`, 'saturação')}
+      ${metric('Peso', `${p.lastVitals.weightKg} kg`, 'antropometria')}
+    </div>
+    <div class="grid two">
+      <section class="card"><h3>Resumo clínico</h3>
+        <div class="clinical-block"><strong>Condições</strong>${p.conditions.map(x => `<span>${esc(x)}</span>`).join('')}</div>
+        <div class="clinical-block"><strong>Alergias</strong>${p.allergies.length ? p.allergies.map(x => `<span class="warning-text">${esc(x)}</span>`).join('') : '<span>Nenhuma alergia documentada</span>'}</div>
+        <div class="clinical-block"><strong>Medicamentos</strong>${p.medications.length ? p.medications.map(x => `<span>${esc(x)}</span>`).join('') : '<span>Sem medicamentos ativos nesta demonstração</span>'}</div>
+        <div class="clinical-block"><strong>Alertas</strong>${p.alerts.length ? p.alerts.map(x => `<span class="warning-text">${esc(x)}</span>`).join('') : '<span>Sem alertas ativos</span>'}</div>
+      </section>
+      <section class="card"><h3>Workspaces profissionais</h3><div class="workspace-grid">${workspaces.map(w => `<article class="workspace"><strong>${esc(w.label)}</strong><small>${esc(w.council)}</small><p>${esc(w.clinicalFocus)}</p><span>${w.documents.map(d => esc(d)).join(' · ')}</span></article>`).join('')}</div></section>
+    </div>
+    <section class="card"><div class="card-head"><h3>Linha do tempo</h3><span class="badge">${summary.timeline.length} registros</span></div>
+      <div class="timeline">${summary.timeline.map(e => `<article><div class="timeline-dot"></div><div><strong>${esc(e.professionLabel)} · ${esc(e.professional)}</strong><small>${fmtDate(e.occurredAt)}</small><p><b>Avaliação:</b> ${esc(e.assessment)}</p><p><b>Plano:</b> ${esc(e.plan)}</p><span>${e.diagnoses.map(d => esc(d)).join(' · ')}</span></div></article>`).join('')}</div>
+    </section>
+    <div class="notice">Este Patient 360 reaproveita o princípio do RenoveJá de consolidar prontuário, contexto pré-consulta e atuação multiprofissional sem dar escrita clínica ao gestor por efeito colateral.</div>`;
 }
 
 async function regulation() {
   title.textContent = 'Regulação e agendamento';
   const rows = await api('/api/regulation');
-  content.innerHTML = `<section class="card"><div class="card-head"><div><p class="eyebrow">SISREG-like, sem scraping</p><h2>Fila regulada</h2></div></div>
+  content.innerHTML = `<section class="card"><div class="card-head"><div><p class="eyebrow">Fila regulada com trilha explícita</p><h2>Regulação</h2></div></div>
     ${table(['Cidadão','Origem','Especialidade','Prioridade','Status','Solicitado','Destino'], rows.map(x => `<tr><td>${esc(x.citizenName)}</td><td>${esc(x.originUnit)}</td><td>${esc(x.specialty)}</td><td>${badge(x.priority)}</td><td>${badge(x.status)}</td><td>${fmtDate(x.requestedAt)}</td><td>${esc(x.destinationUnit || 'A definir')}</td></tr>`))}
   </section>`;
 }
@@ -90,7 +124,7 @@ async function immunization() {
   const [lots, history] = await Promise.all([api('/api/immunization/lots'), api('/api/immunization/history')]);
   content.innerHTML = `<div class="grid two"><section class="card"><h2>Lotes vacinais</h2>${table(['Vacina','Fabricante','Lote','Validade','Estoque'], lots.map(x => `<tr><td>${esc(x.vaccine)}</td><td>${esc(x.manufacturer)}</td><td>${esc(x.lot)}</td><td>${esc(x.expiresOn)}</td><td>${x.stock}</td></tr>`))}</section>
     <section class="card"><h2>Histórico de aplicações</h2>${history.length ? table(['Cidadão','Vacina','Dose','Lote','Profissional'], history.map(x => `<tr><td>${esc(x.citizenName)}</td><td>${esc(x.vaccine)}</td><td>${esc(x.dose)}</td><td>${esc(x.lot)}</td><td>${esc(x.professional)}</td></tr>`)) : '<p class="empty">Ainda não há aplicações nesta sessão.</p>'}</section></div>
-    <div class="notice">O domínio já controla lote, validade, via, local, dose, profissional e baixa automática de estoque. Integração RNDS/SI-PNI permanece dependente de contrato/homologação oficial.</div>`;
+    <div class="notice">O domínio controla lote, validade, via, local, dose, profissional e baixa automática de estoque. RNDS/SI-PNI permanecem dependentes de contrato e homologação oficiais.</div>`;
 }
 
 async function pharmacy() {
@@ -128,10 +162,10 @@ async function diagnostics() {
 async function audit() {
   title.textContent = 'Auditoria e evidências';
   const rows = await api('/api/audit');
-  content.innerHTML = `<section class="card"><div class="card-head"><div><p class="eyebrow">Trilha append-only demonstrativa</p><h2>Eventos operacionais</h2></div></div>${table(['Ator','Ação','Recurso','Detalhe','Data'], rows.map(x => `<tr><td>${esc(x.actor)}</td><td><code>${esc(x.action)}</code></td><td>${esc(x.resource)}</td><td>${esc(x.detail || '—')}</td><td>${fmtDate(x.occurredAt)}</td></tr>`))}</section>`;
+  content.innerHTML = `<section class="card"><div class="card-head"><div><p class="eyebrow">Trilha operacional</p><h2>Eventos auditáveis</h2></div></div>${table(['Ator','Ação','Recurso','Detalhe','Data'], rows.map(x => `<tr><td>${esc(x.actor)}</td><td><code>${esc(x.action)}</code></td><td>${esc(x.resource)}</td><td>${esc(x.detail || '—')}</td><td>${fmtDate(x.occurredAt)}</td></tr>`))}</section>`;
 }
 
-const views = { overview, regulation, billing, immunization, pharmacy, psf, dental, diagnostics, audit };
+const views = { overview, clinical, regulation, billing, immunization, pharmacy, psf, dental, diagnostics, audit };
 window.navigate = async view => {
   document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('active', b.dataset.view === view));
   content.innerHTML = '<div class="loading">Carregando…</div>';
