@@ -2,11 +2,18 @@
 set -euo pipefail
 
 BASE_URL="http://127.0.0.1:5111"
+HARDENED_URL="http://127.0.0.1:5112"
 LOG_FILE="/tmp/jundiai-healthos-security.log"
+HARDENED_LOG="/tmp/jundiai-healthos-security-hardened.log"
+HARDENED_PID=""
 
 dotnet run --project src/Jundiai.Api/Jundiai.Api.csproj -c Release --no-build --urls "$BASE_URL" >"$LOG_FILE" 2>&1 &
 APP_PID=$!
-trap 'kill "$APP_PID" >/dev/null 2>&1 || true' EXIT
+cleanup(){
+  kill "$APP_PID" >/dev/null 2>&1 || true
+  if [[ -n "$HARDENED_PID" ]]; then kill "$HARDENED_PID" >/dev/null 2>&1 || true; fi
+}
+trap cleanup EXIT
 
 for _ in $(seq 1 35); do
   if curl -fsS "$BASE_URL/api/health/live" >/dev/null 2>&1; then break; fi
@@ -62,7 +69,7 @@ CHALLENGE=$(python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["statu
 ADMIN_MFA=$(curl -fsS -X POST "$BASE_URL/api/auth/mfa/verify" -H 'Content-Type: application/json' -d "{\"challengeId\":\"$CHALLENGE\",\"code\":\"008026\"}")
 ADMIN_TOKEN=$(python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["status"]=="authenticated" and d["mfaVerified"] is True; print(d["sessionToken"])' <<<"$ADMIN_MFA")
 ADMIN_AUTH=(-H "Authorization: Bearer $ADMIN_TOKEN")
-curl -fsS "${ADMIN_AUTH[@]}" "$BASE_URL/api/security/readiness" | assert_json 'd["anonymousProtectedApi"]=="401-fail-closed" and d["demoRoleHeaderEnabled"] is False and d["responseHeaders"]["contentTypeOptions"]=="nosniff" and d["responseHeaders"]["frameOptions"]=="SAMEORIGIN"'
+curl -fsS "${ADMIN_AUTH[@]}" "$BASE_URL/api/security/readiness" | assert_json 'd["pocMode"] is True and d["mfaDefaultCodeEnabled"] is True and d["mfaCodeSource"]=="explicit-poc-default" and d["anonymousProtectedApi"]=="401-fail-closed" and d["demoRoleHeaderEnabled"] is False and d["responseHeaders"]["contentTypeOptions"]=="nosniff" and d["responseHeaders"]["frameOptions"]=="SAMEORIGIN"'
 curl -fsS "${ADMIN_AUTH[@]}" "$BASE_URL/api/sus/production" >/dev/null
 
 # 6. Logout revoga sessão imediatamente.
@@ -70,4 +77,17 @@ curl -fsS -X POST "${ACS_AUTH[@]}" "$BASE_URL/api/auth/logout" >/dev/null
 CODE=$(curl -sS -o /tmp/revoked.json -w '%{http_code}' "${ACS_AUTH[@]}" "$BASE_URL/api/psf/esus/individuals")
 [[ "$CODE" == "401" ]] || { echo "Expected revoked ACS session to return 401, got $CODE"; cat /tmp/revoked.json; exit 1; }
 
-echo "Smoke segurança negativa OK: headers, anonymous 401, forged-role 403, RBAC real, MFA e revogacao"
+# 7. Quando o default demonstrativo é desligado e não há código no ambiente, MFA deve falhar fechado.
+env -u JUNDIAI_DEMO_MFA_CODE Jundiai__DemoMfa__AllowDefaultCode=false \
+  dotnet run --project src/Jundiai.Api/Jundiai.Api.csproj -c Release --no-build --urls "$HARDENED_URL" >"$HARDENED_LOG" 2>&1 &
+HARDENED_PID=$!
+for _ in $(seq 1 35); do
+  if curl -fsS "$HARDENED_URL/api/health/live" >/dev/null 2>&1; then break; fi
+  sleep 1
+done
+HARDENED_LOGIN=$(curl -fsS -X POST "$HARDENED_URL/api/auth/login" -H 'Content-Type: application/json' -d '{"userName":"admin.jundiai","password":"Jundiai#008"}')
+HARDENED_CHALLENGE=$(python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["status"]=="mfa_required"; print(d["challengeId"])' <<<"$HARDENED_LOGIN")
+CODE=$(curl -sS -o /tmp/hardened-mfa.json -w '%{http_code}' -X POST "$HARDENED_URL/api/auth/mfa/verify" -H 'Content-Type: application/json' -d "{\"challengeId\":\"$HARDENED_CHALLENGE\",\"code\":\"008026\"}")
+[[ "$CODE" == "401" ]] || { echo "Expected default MFA code to fail when fallback is disabled, got $CODE"; cat /tmp/hardened-mfa.json; exit 1; }
+
+echo "Smoke segurança negativa OK: headers, anonymous 401, forged-role 403, RBAC real, MFA configurável/fail-closed e revogacao"
