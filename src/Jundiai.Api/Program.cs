@@ -29,6 +29,7 @@ builder.Services.AddSingleton<OperationalReadinessStore>();
 builder.Services.AddSingleton<PocScenarioStore>();
 
 var app = builder.Build();
+app.UseJundiaiProblemDetails();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
@@ -80,6 +81,7 @@ app.MapIntegrationRegistryEndpoints();
 app.MapOperationalReadinessEndpoints();
 app.MapPopulationAnalyticsEndpoints();
 app.MapPocScenarioEndpoints();
+app.MapPlatformReadinessEndpoints();
 
 app.MapGet("/api/regulation", (DemoStore store) => Results.Ok(store.Regulation()));
 app.MapPost("/api/regulation", (CreateRegulationRequest request, DemoStore store) =>
