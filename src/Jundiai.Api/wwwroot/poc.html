@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Jundiaí HealthOS · Modo POC</title>
+  <link rel="stylesheet" href="/poc.css" />
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <div class="brand-mark">J</div>
+    <div><strong>Jundiaí HealthOS</strong><small>Modo banca · RCE 008/2026</small></div>
+  </div>
+  <div class="top-actions">
+    <a class="button ghost" href="/">Operação</a>
+    <a class="button ghost" href="/operations.html">Backoffice</a>
+    <a class="button ghost" href="/citizen.html">Cidadão</a>
+    <button class="ghost" id="refresh">Atualizar</button>
+    <button id="logout">Sair</button>
+  </div>
+</header>
+
+<main class="shell">
+  <section class="hero">
+    <div>
+      <p class="eyebrow">Contract Pack · JUNDIAI-RCE-008-2026-POC</p>
+      <h1>Uma apresentação guiada pelos 14 blocos avaliados</h1>
+      <p>O cockpit cruza capacidade implementada, endpoint verificável, fluxo visual e dependência externa. “POC implementada” aqui não significa homologação ou implantação definitiva.</p>
+      <p><small>Readiness recalculado em <span id="generated">—</span></small></p>
+    </div>
+    <div class="score" id="score" style="--score:0%"><div><strong id="score-value">0</strong><span>readiness POC</span></div></div>
+  </section>
+
+  <div id="error" class="risk" hidden></div>
+  <section class="summary-grid" id="summary"></section>
+
+  <div class="section-head">
+    <div><h2>14 blocos da demonstração</h2><p>Cada cartão tem estado, pontuação e evidência funcional.</p></div>
+  </div>
+  <section class="blocks" id="blocks"></section>
+
+  <div class="section-head">
+    <div><h2>Motores críticos</h2><p>Leitura rápida do que a banca pode pedir para aprofundar.</p></div>
+  </div>
+  <section class="module-grid">
+    <article class="module" id="security"></article>
+    <article class="module" id="scheduling"></article>
+    <article class="module" id="diagnostics"></article>
+    <article class="module" id="inventory"></article>
+    <article class="module" id="telemedicine"></article>
+    <article class="module" id="documents"></article>
+    <article class="module" id="evidence"></article>
+    <article class="module" id="dashboard-module"></article>
+    <article class="module">
+      <h3>Atalhos de demonstração</h3>
+      <p>Abra a jornada certa sem procurar menu durante a banca.</p>
+      <div class="rows">
+        <div class="row"><span>Patient 360 / regulação / faturamento</span><strong><a href="/">Centro municipal</a></strong></div>
+        <div class="row"><span>Recepção / vacina / estoque / prontuário físico</span><strong><a href="/operations.html">Backoffice</a></strong></div>
+        <div class="row"><span>APS / e-SUS demonstrativo</span><strong><a href="/esus.html">Território</a></strong></div>
+        <div class="row"><span>ACS offline</span><strong><a href="/acs.html">App ACS</a></strong></div>
+        <div class="row"><span>Porta Digital</span><strong><a href="/citizen.html">Cidadão</a></strong></div>
+        <div class="row"><span>Segurança</span><strong><a href="/login.html">Login/MFA</a></strong></div>
+      </div>
+    </article>
+  </section>
+
+  <div class="section-head">
+    <div><h2>Bloqueadores que código não resolve</h2><p>Deixar isso explícito evita confundir POC forte com habilitação documental e homologações de terceiros.</p></div>
+  </div>
+  <section id="risks"></section>
+
+  <section class="footer-note">
+    <strong>Notas de industrialização</strong>
+    <ul id="critical-notes"></ul>
+    O objetivo desta tela é tornar a apresentação determinística e auditável. Ela não substitui edital, anexos, análise jurídica, homologações oficiais ou o plano de implantação após eventual contratação.
+  </section>
+</main>
+<script src="/poc.js"></script>
+</body>
+</html>
