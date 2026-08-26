@@ -15,6 +15,15 @@ done
 
 assert_json(){ local expression="$1"; python3 -c "import json,sys; d=json.load(sys.stdin); assert ($expression), d"; }
 
+# 0. Headers defensivos já implementados devem aparecer nas respostas da instância.
+HEADERS=$(mktemp)
+curl -fsS -D "$HEADERS" -o /dev/null "$BASE_URL/api/health/live"
+grep -Eqi '^X-Jundiai-POC:[[:space:]]*RCE-008-2026' "$HEADERS"
+grep -Eqi '^X-Content-Type-Options:[[:space:]]*nosniff' "$HEADERS"
+grep -Eqi '^X-Frame-Options:[[:space:]]*SAMEORIGIN' "$HEADERS"
+grep -Eqi '^Referrer-Policy:[[:space:]]*same-origin' "$HEADERS"
+grep -Eqi '^Permissions-Policy:[[:space:]]*camera=\(self\),[[:space:]]*microphone=\(self\),[[:space:]]*geolocation=\(self\)' "$HEADERS"
+
 # 1. Rota protegida sem sessão deve falhar fechada com 401.
 CODE=$(curl -sS -o /tmp/anonymous.json -w '%{http_code}' "$BASE_URL/api/sus/production")
 [[ "$CODE" == "401" ]] || { echo "Expected 401 for anonymous protected API, got $CODE"; cat /tmp/anonymous.json; exit 1; }
@@ -53,7 +62,7 @@ CHALLENGE=$(python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["statu
 ADMIN_MFA=$(curl -fsS -X POST "$BASE_URL/api/auth/mfa/verify" -H 'Content-Type: application/json' -d "{\"challengeId\":\"$CHALLENGE\",\"code\":\"008026\"}")
 ADMIN_TOKEN=$(python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["status"]=="authenticated" and d["mfaVerified"] is True; print(d["sessionToken"])' <<<"$ADMIN_MFA")
 ADMIN_AUTH=(-H "Authorization: Bearer $ADMIN_TOKEN")
-curl -fsS "${ADMIN_AUTH[@]}" "$BASE_URL/api/security/readiness" | assert_json 'd["anonymousProtectedApi"]=="401-fail-closed" and d["demoRoleHeaderEnabled"] is False'
+curl -fsS "${ADMIN_AUTH[@]}" "$BASE_URL/api/security/readiness" | assert_json 'd["anonymousProtectedApi"]=="401-fail-closed" and d["demoRoleHeaderEnabled"] is False and d["responseHeaders"]["contentTypeOptions"]=="nosniff" and d["responseHeaders"]["frameOptions"]=="SAMEORIGIN"'
 curl -fsS "${ADMIN_AUTH[@]}" "$BASE_URL/api/sus/production" >/dev/null
 
 # 6. Logout revoga sessão imediatamente.
@@ -61,4 +70,4 @@ curl -fsS -X POST "${ACS_AUTH[@]}" "$BASE_URL/api/auth/logout" >/dev/null
 CODE=$(curl -sS -o /tmp/revoked.json -w '%{http_code}' "${ACS_AUTH[@]}" "$BASE_URL/api/psf/esus/individuals")
 [[ "$CODE" == "401" ]] || { echo "Expected revoked ACS session to return 401, got $CODE"; cat /tmp/revoked.json; exit 1; }
 
-echo "Smoke segurança negativa OK: anonymous 401, forged-role 403, RBAC real, MFA e revogacao"
+echo "Smoke segurança negativa OK: headers, anonymous 401, forged-role 403, RBAC real, MFA e revogacao"
