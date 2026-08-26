@@ -16,6 +16,7 @@ for _ in $(seq 1 45); do
   sleep 1
 done
 
+curl -fsS "$BASE_URL/api/health/ready" >/dev/null || { echo "Aplicação PostgreSQL não iniciou"; cat "$LOG_FILE"; exit 1; }
 assert_json(){ local expression="$1"; python3 -c "import json,sys; d=json.load(sys.stdin); assert ($expression), d"; }
 
 curl -fsS "$BASE_URL/api/health/ready" | assert_json 'd["status"]=="ready" and d["database"]=="durable-postgresql" and d["pocFallbackAllowed"] is False'
@@ -29,9 +30,24 @@ AUTH=(-H "Authorization: Bearer $TOKEN" -H 'X-Institution-Id: jundiai-ci' -H 'X-
 READINESS=$(curl -fsS "${AUTH[@]}" "$BASE_URL/api/audit/persistence/readiness")
 python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["configured"] is True and d["canConnect"] is True and d["mode"]=="durable-postgresql" and len(d["pendingMigrations"])==0' <<<"$READINESS"
 
+# Checkpoint resumido existente.
 CHECKPOINT=$(curl -fsS -X POST "${AUTH[@]}" "$BASE_URL/api/audit/persistence/checkpoint" -H 'Content-Type: application/json' -d '{"label":"ci-postgres-checkpoint"}')
 python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["institutionId"]=="jundiai-ci" and d["healthUnitId"]=="UBS-CI" and d["envelopeCount"]>=7 and d["checkpointId"]' <<<"$CHECKPOINT"
 
+# Checkpoint completo: os principais bounded contexts precisam entrar no mesmo checkpoint institucional.
+FULL=$(curl -fsS -X POST "${AUTH[@]}" "$BASE_URL/api/audit/persistence/checkpoints/full" -H 'Content-Type: application/json' -d '{"label":"ci-full-domain-checkpoint"}')
+FULL_ID=$(python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["institutionId"]=="jundiai-ci" and d["healthUnitId"]=="UBS-CI"; assert d["envelopeCount"]>=19; assert len(d["manifestSha256"])==64; print(d["checkpointId"])' <<<"$FULL")
+
+MANIFEST=$(curl -fsS "${AUTH[@]}" "$BASE_URL/api/audit/persistence/checkpoints/$FULL_ID/manifest")
+python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["checkpointId"]==sys.argv[1]; assert len(d["entries"])>=19; assert len(d["manifestSha256"])==64; kinds={x["kind"] for x in d["entries"]}; required={"citizens-master","scheduling-bookings","clinical-orders","diagnostics-orders","immunizations-history","pharmacy-dispensations","referrals","sus-production-v2","evidence-ledger"}; assert required.issubset(kinds), (required-kinds)' "$FULL_ID" <<<"$MANIFEST"
+
+DRILL=$(curl -fsS -X POST "${AUTH[@]}" "$BASE_URL/api/audit/persistence/recovery-drill" -H 'Content-Type: application/json' -d "{\"checkpointId\":\"$FULL_ID\",\"actor\":\"ci.recovery\"}")
+python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["checkpointId"]==sys.argv[1]; assert d["integrityValid"] is True; assert d["restorePreviewValid"] is True; assert d["criticalKindsPresent"]==d["criticalKindsExpected"]; assert d["envelopeCount"]>=19; assert len(d["failures"])==0' "$FULL_ID" <<<"$DRILL"
+
+curl -fsS "${AUTH[@]}" "$BASE_URL/api/audit/persistence/recovery/readiness" | assert_json 'd["configured"] is True and d["recoveryDrillAvailable"] is True and d["checkpoints"]>=2'
+curl -fsS "${AUTH[@]}" "$BASE_URL/api/audit/persistence/checkpoints" | assert_json 'len(d)>=2 and any(x["envelopeCount"]>=19 for x in d)'
+
+# Outbox + replay idempotente.
 FIRST=$(curl -fsS -X POST "${AUTH[@]}" "$BASE_URL/api/audit/persistence/outbox" -H 'Content-Type: application/json' -d '{"type":"rnds.document.demo","idempotencyKey":"ci-outbox-001","payload":{"citizen":"demo","document":"hash-only"}}')
 OUTBOX_ID=$(python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["status"]=="pending" and d["idempotentReplay"] is False; print(d["id"])' <<<"$FIRST")
 SECOND=$(curl -fsS -X POST "${AUTH[@]}" "$BASE_URL/api/audit/persistence/outbox" -H 'Content-Type: application/json' -d '{"type":"rnds.document.demo","idempotencyKey":"ci-outbox-001","payload":{"citizen":"demo","document":"hash-only"}}')
@@ -41,4 +57,7 @@ PROCESSED=$(curl -fsS -X POST "${AUTH[@]}" "$BASE_URL/api/audit/persistence/outb
 python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["status"]=="processed" and d["processedAt"]' <<<"$PROCESSED"
 curl -fsS "${AUTH[@]}" "$BASE_URL/api/audit/persistence/outbox" | assert_json 'any(x["status"]=="processed" for x in d)'
 
-echo "Smoke PostgreSQL OK"
+# Recovery drill também precisa deixar trilha de evidência.
+curl -fsS "${AUTH[@]}" "$BASE_URL/api/evidence/ledger" | assert_json 'any(x["action"]=="persistence.full-checkpoint" for x in d) and any(x["action"]=="persistence.recovery-drill" for x in d)'
+
+echo "Smoke PostgreSQL + recovery OK · checkpoint=$FULL_ID"
