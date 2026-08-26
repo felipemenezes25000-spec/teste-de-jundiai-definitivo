@@ -1,11 +1,12 @@
 # Matriz POC — Jundiaí RCE 008/2026
 
-Estado funcional do repositório. Esta matriz separa deliberadamente **fluxo demonstrável**, **industrialização** e **integração/homologação externa**.
+Estado funcional do repositório. Esta matriz separa deliberadamente **fluxo demonstrável**, **fundação de industrialização**, **integração/homologação externa** e **obrigação operacional/documental**.
 
 ## Legenda
 
 - **IMPLEMENTADO POC**: API + regra + fluxo demonstrável existem neste repositório.
-- **PARCIAL**: núcleo existe, mas depende de maior profundidade, persistência, integração ou dado real.
+- **FUNDAÇÃO IMPLEMENTADA**: mecanismo técnico foi implementado e testado, mas ainda não representa operação produtiva completa.
+- **PARCIAL**: núcleo existe, mas depende de maior profundidade, dado real, integração ou implantação.
 - **EXTERNO**: depende de credencial, fornecedor, layout, homologação ou autorização oficial.
 - **OPERACIONAL**: depende de equipe/processo/SLA além do software.
 
@@ -15,26 +16,46 @@ Estado funcional do repositório. Esta matriz separa deliberadamente **fluxo dem
 
 | # | Bloco | Estado | Evidência atual |
 |---:|---|---|---|
-| 1 | Administração, segurança e auditoria | IMPLEMENTADO POC | login demonstrativo, PBKDF2-SHA256, lockout, MFA em perfis sensíveis, sessão randômica, RBAC default-deny, auditoria e ledger SHA-256 encadeado |
-| 2 | Cadastros | PARCIAL alto | cidadão, CPF/CNS, unidade, território, área/microárea, 58 unidades demo, workspace de migração; CadSUS é EXTERNO |
-| 3 | Regulação | IMPLEMENTADO POC | fila, prioridade, origem/destino, transições, handoff da Porta Digital e rastreabilidade |
-| 4 | Agendamento | IMPLEMENTADO POC | grades, slots, cotas, bloqueio, capacidade/encaixe, fila de espera e promoção por prioridade |
-| 5 | Recepção | IMPLEMENTADO POC | check-in, prioridade, fila, chamada, sala e profissional |
-| 6 | PEP multiprofissional / odontologia | IMPLEMENTADO POC | Patient 360, workspaces profissionais, encontros, documentos clínicos, odontograma FDI por superfície, periodontal por sextante e produção odontológica |
+| 1 | Administração, segurança e auditoria | IMPLEMENTADO POC | login demonstrativo, PBKDF2-SHA256, lockout, MFA em perfis sensíveis, sessão randômica, RBAC default-deny, auditoria, LGPD/break-glass e ledger SHA-256 encadeado |
+| 2 | Cadastros | IMPLEMENTADO POC / EXTERNO no CadSUS | MPI municipal, CPF/CNS, busca normalizada, demografia, endereço/contato, território, duplicidade/reconciliação, cadastro profissional e 58 unidades demo; CadSUS real é EXTERNO |
+| 3 | Regulação | IMPLEMENTADO POC | fila, prioridade, origem/destino, transições, referência/contrarreferência, handoff da Porta Digital e rastreabilidade |
+| 4 | Agendamento | IMPLEMENTADO POC | grades, slots, cotas, bloqueio, capacidade/encaixe, fila de espera, lifecycle, remarcação, no-show e relatório de perda/ocupação |
+| 5 | Recepção | IMPLEMENTADO POC | check-in, prioridade, fila, chamada, sala, profissional e diretório demonstrativo de unidades |
+| 6 | PEP multiprofissional / odontologia | IMPLEMENTADO POC | Patient 360, workspaces profissionais, encontros, ordens clínicas, MAR, planos de cuidado, documentos, odontograma FDI por superfície, periodontal por sextante e produção odontológica |
 | 7 | Laboratório e imagem | IMPLEMENTADO POC / EXTERNO nas integrações | pedido, agenda, coleta, execução, laudo, resultado crítico/ciência, anexos e metadados; PACS/LIS reais são EXTERNOS |
-| 8 | Saúde da Família / território | IMPLEMENTADO POC | família, domicílio, área, microárea, ACS, cadastro individual/domiciliar e visita APS |
-| 9 | Imunização | IMPLEMENTADO POC / EXTERNO na transmissão | lote, validade, dose, via, local, profissional, baixa de estoque e campanhas; RNDS/SI-PNI real é EXTERNO |
-| 10 | Produção e faturamento SUS | IMPLEMENTADO POC / PARCIAL oficial | produção nominal, catálogo SIGTAP reduzido, críticas CBO/idade/sexo/dente/sextante, competência, fechamento, reabertura, histórico e checksum; arquivo oficial vigente é etapa de implantação |
-| 11 | Farmácia / materiais / almoxarifado | IMPLEMENTADO POC | dispensação, lote, validade, mínimos, fornecedor/NF, inventário e divergência, recall por lote, ciência por unidade, alertas e livro demonstrativo de controlados |
-| 12 | ACS móvel/offline | IMPLEMENTADO POC | PWA, persistência local, captura sem rede e sincronização posterior |
-| 13 | Cidadão + telemedicina | IMPLEMENTADO POC / EXTERNO no vídeo produtivo | Porta Digital, red flags determinísticas, consentimento/handoff idempotente, sala de espera, preflight, participantes, máquina de estados e resumo clínico |
-| 14 | Analytics / gestão / evidência | IMPLEMENTADO POC | dashboard executivo, regulação aging, risco de abastecimento, segurança clínica, SLA, Contract Pack, Evidence Ledger, CareTrace e AI Flight Recorder |
+| 8 | Saúde da Família / território | IMPLEMENTADO POC | família, domicílio, área, microárea, ACS, cadastro individual/domiciliar, visita APS e exportação demonstrativa |
+| 9 | Imunização | IMPLEMENTADO POC / EXTERNO na transmissão | calendário POC, screening, lote, validade, dose, via/local, profissional, baixa de estoque, cobertura, evento adverso e campanhas; RNDS/SI-PNI real é EXTERNO |
+| 10 | Produção e faturamento SUS | IMPLEMENTADO POC / PARCIAL oficial | produção nominal, catálogo SIGTAP parametrizado/reduzido, críticas CBO/idade/sexo/dente/sextante, competência, fechamento, reabertura, versionamento e checksum; layout oficial vigente é etapa de implantação |
+| 11 | Farmácia / materiais / almoxarifado | IMPLEMENTADO POC | conciliação medicamentosa, ordem clínica ativa, dispensação vinculada, lote, validade, mínimos, fornecedor/NF, inventário/divergência, recall, ciência por unidade, alertas e livro demonstrativo de controlados |
+| 12 | ACS móvel/offline | IMPLEMENTADO POC | PWA offline-first, persistência local, fila de captura sem rede e sincronização posterior |
+| 13 | Cidadão + telemedicina | IMPLEMENTADO POC / EXTERNO no vídeo produtivo | Porta Digital, red flags determinísticas, consentimento/handoff idempotente, sala de espera, preflight, participantes, máquina de estados, teleconsulta e resumo clínico |
+| 14 | Analytics / gestão / evidência | IMPLEMENTADO POC | Command Center, dashboards, regulação aging, risco de abastecimento, segurança clínica, SLA, Contract Pack, runner 14/14, Evidence Ledger, CareTrace, AI Flight Recorder, Production Gates e Evidence Pack verificável |
 
-## Diferenciais HealthOS já demonstráveis
+## Diferenciais HealthOS demonstráveis
 
 ### Contract Pack Jundiaí
 
-`/api/contract/jundiai/readiness` calcula aderência dos 14 blocos e mantém uma lista explícita de bloqueadores não resolvidos por código. `/poc.html` transforma isso em cockpit para a banca.
+`/api/contract/jundiai/readiness` calcula aderência dos 14 blocos e mantém bloqueadores não resolvidos por software. `/poc.html` transforma isso em cockpit determinístico para a banca.
+
+### Runner dos 14 blocos
+
+`POST /api/poc/verification/run` verifica os 14 blocos contra o estado funcional da instância e grava evidências requisito a requisito no Evidence Ledger. A baseline validada executa **14/14 blocos** no smoke integrado.
+
+### Evidence Pack da banca
+
+`POST /api/poc/evidence-pack` gera um snapshot consolidado contendo:
+
+- resultado fresco/reutilizado do runner 14/14;
+- readiness do Contract Pack;
+- índice de cada bloco com capacidades, tela, endpoints e referências do Evidence Ledger;
+- registro das integrações e seu estado real;
+- Production Gates;
+- estado de persistência/recovery/messaging;
+- bloqueadores não resolvidos por código;
+- janela de eventos do Evidence Ledger;
+- SHA-256 calculado sobre JSON canônico determinístico.
+
+`/evidence-pack.html` apresenta o pacote e permite verificar/exportar o JSON. `/api/poc/evidence-pack/latest/verify` recalcula o hash e verifica também a cadeia do Evidence Ledger.
 
 ### Cenário Ouro
 
@@ -58,7 +79,32 @@ O AI Flight Recorder registra modelo, versão, prompt, hash de entrada/saída, c
 
 ### Registro de integrações
 
-CadSUS, RNDS, SI-PNI, e-SUS APS, DATASUS BPA, SIGTAP, BNAFAR/Hórus, PACS, LIS, gov.br, ICP-Brasil, carimbo do tempo e vídeo são tratados como integrações governadas. O sistema **não permite marcar homologado/produção sem referência de evidência**.
+CadSUS, RNDS, SI-PNI, e-SUS APS, DATASUS BPA, SIGTAP, BNAFAR/Hórus, PACS, LIS, gov.br, ICP-Brasil, carimbo do tempo e vídeo são tratados como integrações governadas. O sistema **não permite marcar homologated/production_enabled sem EvidenceReference explícita**.
+
+### Persistência e recovery
+
+A fundação PostgreSQL possui EF Core, migration versionada, escopo instituição/unidade, checkpoint resumido, checkpoint completo de bounded contexts, manifesto SHA-256, canonicalização JSON compatível com `jsonb`, verificação de integridade, preview seguro de restauração e recovery drill com medição de idade/RPO observado.
+
+Isso é **FUNDAÇÃO IMPLEMENTADA**, não promessa de backup/PITR/failover produtivos.
+
+### Inbox / outbox / idempotência
+
+Existe fundação persistente para:
+
+- outbox transacional;
+- replay idempotente por chave;
+- inbox com receipt persistido e deduplicação;
+- SHA-256 canônico de payload;
+- estado de retry;
+- dead-letter;
+- requeue manual justificado;
+- isolamento por instituição.
+
+Workers reais, backoff/jitter, broker/queue gerenciada e adapters externos produtivos ainda são implantação.
+
+### LGPD e observabilidade
+
+Há finalidade/minimização demonstrativas, break-glass temporário com trilha, revogação, exportação do titular com hash, correlation ID, health/readiness, métricas agregadas de requisição/erro/latência e telemetria operacional. SOC, SIEM, retenção formal, SLO/SLA produtivos e resposta a incidentes continuam industrialização.
 
 ### Migração de legado
 
@@ -66,16 +112,16 @@ Há workspace com manifesto SHA-256 de origem, mapping campo-a-campo, validaçã
 
 ### Operação e treinamento
 
-Há service desk demonstrativo com severidade/SLA, transições e breach, mais plano de treinamento, turmas, capacidade e lista de presença. Cobertura contratual 24x7 e equipe dedicada continuam OPERACIONAIS.
+Há service desk demonstrativo com severidade/SLA, transições e breach, mais plano de treinamento, turmas, capacidade e lista de presença. Cobertura contratual 24x7, equipe dedicada e comprovação operacional continuam OPERACIONAIS.
 
-## O que ainda é industrialização de produção
+## O que ainda separa a POC de produção
 
-- PostgreSQL como fonte transacional de verdade em substituição aos stores em memória;
-- migrations, retenção, arquivo e isolamento real por instituição/unidade;
-- IdP/MFA produtivos, secret manager e ciclo de certificados;
-- observabilidade central, SLO/SLA, correlação, alertas e SOC/processo de incidente;
-- backup, PITR, restauração testada, DR e RTO/RPO contratual;
-- outbox/inbox, retries e idempotência persistente para integrações;
+- migrar os stores de domínio em memória para PostgreSQL como fonte transacional de verdade;
+- definir retenção, arquivamento legal e isolamento produtivo completo;
+- IdP/MFA corporativos, secret manager e ciclo de certificados;
+- observabilidade central, logs/traces/metrics gerenciados, alertas e SOC/processo de incidente;
+- backup gerenciado, PITR, cópia offsite, restauração em ambiente isolado, RTO/RPO contratual e failover/DR;
+- workers/broker de integração, backoff/jitter e inbox/outbox por adapter produtivo;
 - testes de carga/capacidade com volumetria real municipal;
 - E2E em navegador cobrindo os 14 blocos;
 - implantação e migração reais do legado CIJUN;
@@ -83,6 +129,20 @@ Há service desk demonstrativo com severidade/SLA, transições e breach, mais p
 - provedor de vídeo e rede TURN conforme arquitetura final;
 - layouts/protocolos oficiais vigentes de DATASUS/e-SUS e demais sistemas;
 - credenciais/homologações CadSUS, RNDS, SI-PNI, BNAFAR/Hórus, PACS/LIS etc.
+
+## Validação técnica acumulada
+
+A baseline anterior passou em CI consolidada com:
+
+- validação de JavaScript e scripts shell;
+- higiene de segredo para repositório público;
+- restore/build Release .NET 8;
+- smoke integrado da POC;
+- smoke de governança/plataforma;
+- smoke da jornada assistencial wave 4;
+- PostgreSQL 16 real com migrations, checkpoints, hash canônico `jsonb`, recovery drill, inbox/outbox, idempotência, retry, dead-letter e requeue.
+
+O Evidence Pack foi adicionado após essa baseline e deve permanecer coberto pelo smoke de plataforma nas próximas validações consolidadas.
 
 ## Bloqueador comercial/documental crítico
 
