@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Jundiaí HealthOS · Agenda Central</title>
+  <link rel="stylesheet" href="/poc.css" />
+  <style>
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:end}.toolbar label{font-size:12px;font-weight:800;color:var(--muted);display:grid;gap:5px}.toolbar select,.toolbar input{padding:10px 11px;border:1px solid var(--line);border-radius:10px;background:#fff;min-width:180px}.slot-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.slot{border:1px solid var(--line);border-radius:14px;padding:13px;background:#fff}.slot.full{opacity:.55}.slot.blocked{background:#fff6f5;border-color:#efd4d0}.slot strong{display:block}.slot small{color:var(--muted)}.slot .actions{display:flex;gap:6px;margin-top:10px}.slot .actions button{padding:7px 9px;font-size:11px;margin:0}.quota{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px}.bar{height:9px;background:#edf1f5;border-radius:99px;overflow:hidden;margin-top:8px}.bar span{display:block;height:100%;background:#1f689f}.wait{display:grid;grid-template-columns:1fr auto;gap:10px;padding:10px 0;border-bottom:1px solid #edf1f5}.wait small{display:block;color:var(--muted)}.notice{padding:14px;border-radius:12px;background:#f7fbff;border:1px solid #dfeaf5;color:#52687e;margin-top:12px}@media(max-width:950px){.slot-grid{grid-template-columns:1fr 1fr}}@media(max-width:650px){.slot-grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><div class="brand-mark">A</div><div><strong>Agenda Central</strong><small>grades, cotas, capacidade e fila regulada</small></div></div>
+  <div class="top-actions"><a class="button ghost" href="/poc.html">← Modo POC</a><a class="button ghost" href="/">Regulação</a></div>
+</header>
+<main class="shell">
+  <section class="hero"><div><p class="eyebrow">Bloco 04 · Agendamento</p><h1>Agenda é política operacional, não só calendário</h1><p>Grades por unidade/especialidade, capacidade, encaixe configurado, cotas e fila de espera com promoção por prioridade.</p></div><div class="score" style="--score:91%"><div><strong id="slot-count">—</strong><span>slots POC</span></div></div></section>
+  <div id="error" class="risk" hidden></div>
+
+  <div class="section-head"><div><h2>Disponibilidade</h2><p>Filtre e opere slots do cenário demonstrativo.</p></div></div>
+  <section class="module">
+    <div class="toolbar">
+      <label>Especialidade<select id="specialty"><option value="">Todas</option></select></label>
+      <label>Unidade<select id="unit"><option value="">Todas</option></select></label>
+      <label>Cidadão<select id="citizen"></select></label>
+      <label>Prioridade<select id="priority"><option>routine</option><option>moderate</option><option>high</option><option>very_high</option><option>emergency</option></select></label>
+      <button id="refresh">Atualizar</button>
+    </div>
+    <div class="notice">Para a POC, a primeira agenda é gerada automaticamente em um horizonte de 21 dias. Em produção, calendário, feriados, profissionais, salas e regras municipais entram na persistência/configuração.</div>
+  </section>
+  <section class="slot-grid" id="slots" style="margin-top:14px"></section>
+
+  <div class="section-head"><div><h2>Cotas</h2><p>Reserva de capacidade por origem de demanda.</p></div></div>
+  <section class="module-grid" id="quotas"></section>
+
+  <div class="section-head"><div><h2>Fila de espera</h2><p>Prioridade explícita e promoção para um slot disponível.</p></div><button id="enqueue">Adicionar cidadão selecionado</button></div>
+  <section class="module" id="waitlist"></section>
+</main>
+<script src="/agenda.js"></script>
+</body>
+</html>
