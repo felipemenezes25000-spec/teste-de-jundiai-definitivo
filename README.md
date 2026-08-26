@@ -12,7 +12,8 @@ Após iniciar a API:
 - `/poc.html` — **Modo Banca**, Contract Pack, preflight e os 14 blocos;
 - `/verification.html` — runner verificável dos 14 blocos;
 - `/evidence-pack.html` — **Evidence Pack da banca**, com SHA-256 canônico e exportação JSON;
-- `/dossier.html` — **Dossiê da Banca**, artefato verificável/imprimível com preflight, Evidence Pack e identidade do build;
+- `/dossier.html` — **Dossiê da Banca**, artefato verificável/imprimível com preflight, Evidence Pack, identidade do build e provenance dos artefatos runtime;
+- `/contingency.html` — **Kit de Contingência**, ZIP verificável com HTML estático autocontido para plano B da apresentação;
 - `/command-center.html` — visão executiva e alertas transversais;
 - `/caretrace.html` — jornada longitudinal CareTrace;
 - `/governance.html` — integrações, IA, migração, LGPD, persistência/recovery e Production Gates;
@@ -53,9 +54,11 @@ Após iniciar a API:
 - Contract Pack Jundiaí e readiness dos 14 blocos;
 - runner automático dos 14 blocos com evidência requisito a requisito;
 - Evidence Pack consolidado e exportável com hash canônico;
-- preflight **Preparar banca completa** com 8 checks, 23 páginas e 11 assets críticos;
-- Dossiê da Banca com código `JUN-XXXX-XXXX-XXXX`, SHA-256 próprio, Evidence Pack embutido e identidade do build;
+- preflight **Preparar banca completa** com 8 checks, **24 páginas** e **12 assets** críticos;
+- Dossiê da Banca com código `JUN-XXXX-XXXX-XXXX`, SHA-256 próprio, Evidence Pack embutido, identidade do build e manifesto dos artefatos runtime;
 - endpoint de build identity com revisão/run quando injetados pelo CI/deploy;
+- runtime artifact provenance com SHA-256 de `Jundiai.Api.dll`, `.deps.json`, `.runtimeconfig.json` e inventário de libraries do runtime;
+- Kit de Contingência com código `KIT-XXXX-XXXX-XXXX`, manifesto, hashes, ZIP verificável e HTML autocontido;
 - CareTrace e lacunas de continuidade assistencial;
 - AI Flight Recorder + revisão humana;
 - registro governado de integrações externas;
@@ -70,7 +73,7 @@ Após iniciar a API:
 - inbox/outbox persistentes, idempotência, retry, dead-letter e requeue justificado;
 - health/readiness, correlation ID e telemetria operacional;
 - finalidade/minimização, break-glass e exportação demonstrativa do titular;
-- browser E2E em Chromium para login/MFA, preflight READY, Evidence Pack, Dossiê e superfícies críticas.
+- browser E2E em Chromium para login/MFA, preflight READY, Evidence Pack, Dossiê, Kit de Contingência e superfícies críticas.
 
 ## Executar
 
@@ -103,14 +106,15 @@ O smoke PostgreSQL é executado em ambiente com PostgreSQL 16 configurado. O Git
 
 A baseline consolidada de **26/08/2026** está registrada em `docs/VALIDATION_BASELINE.md`:
 
-- GitHub Actions **run 30**;
-- run ID `32954612211`;
-- commit validado `9cc2edcb47b24e3523d817b9c4f3d18ad5409408`;
-- runner 14/14;
-- preflight 8/8, 23 páginas e 11 assets;
+- GitHub Actions **run 33**;
+- run ID `32975517312`;
+- commit validado `6800cf18e1a76a4b145efbf3a5c563662fa14003`;
+- runner **14/14**;
+- preflight **8/8**, **24 páginas** e **12 assets**;
 - Evidence Pack íntegro;
-- Dossiê verificável com vínculo ao `GITHUB_SHA` no CI;
-- 4 testes Chromium E2E;
+- Dossiê v2 com provenance runtime e vínculo ao `GITHUB_SHA` no CI;
+- Kit de Contingência ZIP verificado arquivo a arquivo;
+- **5 testes Chromium E2E**;
 - PostgreSQL 16 + recovery + messaging.
 
 Commits posteriores não devem ser tratados como parte dessa baseline até uma nova validação consolidada.
@@ -129,6 +133,6 @@ Commits posteriores não devem ser tratados como parte dessa baseline até uma n
 
 CadSUS, RNDS/SI-PNI, e-SUS/DATASUS, BNAFAR/Hórus, PACS/LIS, gov.br, ICP-Brasil, ACT/carimbo do tempo, vídeo e demais sistemas externos só podem receber status de homologação/produção quando houver credencial, ambiente e evidência externa reais.
 
-Evidence Pack e Dossiê comprovam integridade demonstrativa do estado capturado; não equivalem a assinatura de release, SBOM formal, attestation de supply chain, ICP-Brasil ou carimbo oficial.
+Evidence Pack, Dossiê, runtime artifact provenance e Kit de Contingência comprovam integridade demonstrativa do estado capturado; não equivalem a assinatura de release, SBOM formal, attestation de supply chain, ICP-Brasil, carimbo oficial, backup ou DR.
 
 Da mesma forma, uma POC forte e uma fundação técnica validada não substituem habilitação documental, atestados de capacidade, equipe operacional, migração real, domínio transacional integral em PostgreSQL, backup/PITR/failover, DR produtivo, IdP corporativo, secret manager, SOC/SIEM, testes de carga, homologações e demais Production Gates.
