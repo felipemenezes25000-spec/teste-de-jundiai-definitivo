@@ -22,6 +22,11 @@ builder.Services.AddSingleton<InventoryAdvancedStore>();
 builder.Services.AddSingleton<EvidenceLedgerStore>();
 builder.Services.AddSingleton<ContractPackJundiaiStore>();
 builder.Services.AddSingleton<ClinicalDocumentStore>();
+builder.Services.AddSingleton<AiGovernanceStore>();
+builder.Services.AddSingleton<LegacyMigrationStore>();
+builder.Services.AddSingleton<IntegrationRegistryStore>();
+builder.Services.AddSingleton<OperationalReadinessStore>();
+builder.Services.AddSingleton<PocScenarioStore>();
 
 var app = builder.Build();
 app.UseDefaultFiles();
@@ -68,6 +73,13 @@ app.MapDiagnosticsAdvancedEndpoints();
 app.MapInventoryAdvancedEndpoints();
 app.MapEvidenceLedgerEndpoints();
 app.MapContractPackJundiaiEndpoints();
+app.MapAiGovernanceEndpoints();
+app.MapCareTraceEndpoints();
+app.MapLegacyMigrationEndpoints();
+app.MapIntegrationRegistryEndpoints();
+app.MapOperationalReadinessEndpoints();
+app.MapPopulationAnalyticsEndpoints();
+app.MapPocScenarioEndpoints();
 
 app.MapGet("/api/regulation", (DemoStore store) => Results.Ok(store.Regulation()));
 app.MapPost("/api/regulation", (CreateRegulationRequest request, DemoStore store) =>
