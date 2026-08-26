@@ -1,32 +1,32 @@
 # Baseline de Validação — Jundiaí HealthOS POC
 
-Esta página registra a última baseline técnica consolidada que foi efetivamente executada no GitHub Actions. Ela evita confundir código recém-adicionado com capacidade já comprovada por build, smoke e navegador.
+Esta página registra a última baseline técnica consolidada efetivamente executada no GitHub Actions. Ela evita confundir código recém-adicionado com capacidade comprovada por build, smoke, navegador e PostgreSQL.
 
 ## Baseline validada
 
 - **Data:** 26/08/2026
 - **Workflow:** `ci`
-- **Run:** `30`
-- **Run ID:** `32954612211`
-- **Commit validado:** `9cc2edcb47b24e3523d817b9c4f3d18ad5409408`
+- **Run:** `33`
+- **Run ID:** `32975517312`
+- **Commit validado:** `6800cf18e1a76a4b145efbf3a5c563662fa14003`
 - **Conclusão:** `success`
 - **Runner:** Ubuntu 24.04
 - **Runtime:** .NET 8
 - **Banco do teste durável:** PostgreSQL 16
 - **Navegador E2E:** Chromium via Playwright
 
-> Esta baseline comprova a versão acima. Commits posteriores só passam a integrar uma nova baseline depois de nova validação consolidada.
+> Esta baseline comprova a revisão acima. Commits posteriores só passam a integrar uma nova baseline depois de nova validação consolidada.
 
-## O que o run 30 comprovou
+## O que o run 33 comprovou
 
 ### Compilação e higiene
 
-- validação estática dos JavaScript do frontend e testes E2E;
+- validação estática dos JavaScript do frontend e do Playwright;
 - validação sintática dos scripts shell;
 - verificação de material sensível óbvio no repositório público;
 - `dotnet restore`;
-- build Release da API;
-- nenhum módulo recém-adicionado impediu a composição do container de DI ou o startup da aplicação.
+- build Release completo;
+- composição do DI/startup com Release Provenance, Dossiê v2 e Kit de Contingência.
 
 ### Fluxo funcional integrado
 
@@ -39,13 +39,13 @@ Esta página registra a última baseline técnica consolidada que foi efetivamen
 
 ### Preflight da apresentação
 
-O endpoint `POST /api/poc/presentation/prepare` foi exigido como `ready=true` e validou:
+`POST /api/poc/presentation/prepare` foi exigido como `ready=true` e validou:
 
 - cenário ouro concluído;
 - runner **14/14**;
 - Evidence Pack íntegro;
-- **23 páginas críticas** existentes;
-- **11 assets críticos** existentes;
+- **24 páginas críticas** existentes;
+- **12 assets críticos** existentes;
 - **8/8 checks** aprovados;
 - Evidence Ledger íntegro;
 - governança de integrações sem promoção indevida;
@@ -58,42 +58,82 @@ Foram verificados:
 - geração de snapshot consolidado;
 - índice dos 14 blocos;
 - SHA-256 canônico de 64 caracteres;
-- recomputação de hash;
+- recomputação do hash;
 - vínculo com Evidence Ledger;
 - `demonstrationIntegrityReady=true`;
 - exportação JSON preservando a identidade do pacote.
 
-### Dossiê da Banca
+### Runtime artifact provenance
 
-O run 30 também validou o artefato final da apresentação:
+O run 33 validou o manifesto de proveniência dos bytes carregados pela instância:
 
-- geração de dossiê contendo preflight, Evidence Pack, identidade de build e disclaimers;
-- código curto no formato `JUN-XXXX-XXXX-XXXX`;
-- SHA-256 canônico próprio do dossiê;
+- SHA-256 do manifesto canônico;
+- presença e hash dos três artefatos runtime esperados: `Jundiai.Api.dll`, `.deps.json` e `.runtimeconfig.json`;
+- releitura e recomputação dos hashes dos arquivos;
+- extração do conjunto de libraries do `.deps.json`;
+- hash do conjunto de libraries;
+- vínculo da identidade do build ao `GITHUB_SHA` no CI.
+
+Esse mecanismo é chamado deliberadamente de **runtime artifact provenance**. Ele **não é** SBOM formal, attestation SLSA, assinatura de release ou assinatura criptográfica do fornecedor.
+
+### Dossiê da Banca v2
+
+O Dossiê final foi validado contendo:
+
+- preflight READY;
+- Evidence Pack integral;
+- identidade do build;
+- runtime artifact provenance;
+- código `JUN-XXXX-XXXX-XXXX`;
+- SHA-256 canônico próprio;
 - verificação do código derivado do hash;
-- verificação do Evidence Pack embutido;
-- verificação do Evidence Ledger;
-- preflight `READY`, `14/14` blocos e `8/8` checks;
-- blocker `HAB-AT-29` preservado dentro do artefato;
-- exportação JSON;
-- identidade de build vinculada ao `GITHUB_SHA` durante a execução no GitHub Actions.
+- recomputação do hash do Dossiê;
+- verificação do Evidence Pack e Evidence Ledger;
+- verificação do manifesto e dos bytes runtime;
+- `14/14` blocos e `8/8` checks;
+- `HAB-AT-29` preservado;
+- exportação JSON.
 
-O Dossiê é uma prova de integridade demonstrativa. Ele **não é** assinatura de release, SBOM, attestation SLSA, assinatura ICP-Brasil ou carimbo oficial do tempo.
+### Kit de Contingência da banca
+
+O run 33 também gerou e verificou um ZIP de contingência contendo exatamente:
+
+1. `dossier.json`;
+2. `evidence-pack.json`;
+3. `release-provenance.json`;
+4. `verification.txt`;
+5. `presentation-summary.html`;
+6. `manifest.json`.
+
+Foram exigidos:
+
+- código `KIT-XXXX-XXXX-XXXX`;
+- SHA-256 canônico do manifesto;
+- SHA-256 do ZIP;
+- cinco arquivos de conteúdo indexados no manifesto;
+- tamanho e SHA-256 recalculados de cada arquivo;
+- ZIP abrindo corretamente;
+- HTML estático contendo o resumo dos 14 blocos;
+- HTML autocontido sem dependência `http://` ou `https://`;
+- Dossiê de origem íntegro.
+
+O Kit é contingência da apresentação. Ele **não é backup, PITR, failover, DR ou evidência de operação produtiva**.
 
 ### Browser E2E
 
-Quatro testes Chromium passaram:
+**Cinco testes Chromium passaram:**
 
-1. login + MFA + botão **Preparar banca completa** → `READY`, `8/8`, `14/14`;
+1. login + MFA + **Preparar banca completa** → `READY`, `8/8`, `14/14`;
 2. geração, verificação e download do Evidence Pack;
-3. geração, verificação e download do Dossiê da Banca, inclusive conferência de `sourceRevision == GITHUB_SHA` no CI;
-4. navegação pelas superfícies críticas da apresentação sem erro fatal de documento/script/stylesheet.
+3. geração, verificação e download do Dossiê, incluindo provenance runtime e `sourceRevision == GITHUB_SHA` no CI;
+4. geração, verificação e download do Kit de Contingência pela interface, incluindo confirmação de arquivo ZIP;
+5. navegação pelas superfícies críticas sem erro fatal de documento/script/stylesheet.
 
-Isso reduz o risco clássico de “API verde, tela quebrada na banca”.
+Isso reduz o risco clássico de “API verde, tela quebrada na banca” e adiciona um plano B estático verificável.
 
 ### PostgreSQL, recovery e messaging
 
-O mesmo run comprovou, em PostgreSQL 16 real:
+O mesmo run comprovou em PostgreSQL 16 real:
 
 - migrations e readiness;
 - checkpoint resumido;
@@ -110,7 +150,7 @@ O mesmo run comprovou, em PostgreSQL 16 real:
 
 ## O que esta baseline NÃO comprova
 
-O run 30 não deve ser usado como evidência de:
+O run 33 não deve ser usado como evidência de:
 
 - homologação CadSUS, RNDS, SI-PNI, e-SUS/DATASUS, BNAFAR/Hórus, PACS/LIS, gov.br ou outros terceiros;
 - arquivo BPA oficialmente homologado;
@@ -127,12 +167,12 @@ O run 30 não deve ser usado como evidência de:
 
 ## Estado do CI após a baseline
 
-Após o run 30, o workflow foi devolvido para **`workflow_dispatch` apenas**. Uma consulta posterior confirmou que o total permaneceu em 30 runs, portanto o commit de retorno para manual-only não disparou um run 31.
+Após o run 33, o workflow foi devolvido para **`workflow_dispatch` apenas** no commit `67614cda4279f61a3d55785e1caa3ac6afe9da53`. Uma consulta posterior confirmou que o total permaneceu em **33 runs**, portanto o retorno para manual-only não disparou run 34.
 
 ## Regra de uso
 
 Ao apresentar a POC, é correto dizer:
 
-> “A baseline consolidada de 26/08/2026, run 30, passou build, smokes funcionais, Chromium E2E, Evidence Pack, Dossiê verificável e PostgreSQL/recovery/messaging.”
+> “A baseline consolidada de 26/08/2026, run 33, passou build, smokes funcionais, Chromium E2E 5/5, 14/14 blocos, READY 8/8, Evidence Pack, Dossiê com provenance runtime, Kit de Contingência verificável e PostgreSQL/recovery/messaging.”
 
 Não é correto transformar essa frase em “plataforma homologada”, “produção aprovada” ou “todos os requisitos de contratação resolvidos”.
